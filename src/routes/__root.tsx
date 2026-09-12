@@ -15,6 +15,14 @@ function Shell() {
             </Link>
           )}
           <span className="font-semibold">Faena Inspector</span>
+          <span className="ml-auto flex gap-3 text-sm">
+            <Link to="/panel" className="text-slate-500">
+              Panel
+            </Link>
+            <Link to="/acceso" className="text-slate-500">
+              Acceso
+            </Link>
+          </span>
         </nav>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-5">

@@ -38,6 +38,7 @@ import { createDexieOutboxRepository } from '@/modules/sync/infrastructure/dexie
 import { createDexieSyncSource } from '@/modules/sync/infrastructure/dexie-sync-source'
 import { createSupabaseRemoteGateway } from '@/modules/sync/infrastructure/supabase-remote.gateway'
 import { createSyncScheduler } from '@/modules/sync/application/scheduler'
+import { createSupabaseSupervisionGateway } from '@/modules/supervision/infrastructure/supabase-supervision.gateway'
 import { db } from '@/shared/db/db'
 import { newId } from '@/shared/lib/id'
 
@@ -56,6 +57,9 @@ const compressor = createBrowserImageCompressor()
 export const auth = createSupabaseAuthGateway()
 
 export const outbox = createDexieOutboxRepository(db)
+
+/** The online half. Unlike everything above, these calls need a network. */
+export const supervision = createSupabaseSupervisionGateway()
 
 /**
  * The only component that talks to the network. Everything else reads and

@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccesoRouteImport } from './routes/acceso'
 import { Route as InspeccionNuevaRouteImport } from './routes/inspeccion.nueva'
+import { Route as PanelIndexRouteImport } from './routes/panel.index'
+import { Route as PanelIdRouteImport } from './routes/panel.$id'
 import { Route as InspeccionIdIndexRouteImport } from './routes/inspeccion.$id.index'
 import { Route as InspeccionIdDocumentoRouteImport } from './routes/inspeccion.$id.documento'
 import { Route as InspeccionIdFirmaRouteImport } from './routes/inspeccion.$id.firma'
@@ -30,6 +32,16 @@ const AccesoRoute = AccesoRouteImport.update({
 const InspeccionNuevaRoute = InspeccionNuevaRouteImport.update({
   id: '/inspeccion/nueva',
   path: '/inspeccion/nueva',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PanelIndexRoute = PanelIndexRouteImport.update({
+  id: '/panel/',
+  path: '/panel/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PanelIdRoute = PanelIdRouteImport.update({
+  id: '/panel/$id',
+  path: '/panel/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InspeccionIdIndexRoute = InspeccionIdIndexRouteImport.update({
@@ -57,6 +69,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
+  '/panel/$id': typeof PanelIdRoute
+  '/panel/': typeof PanelIndexRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
   '/inspeccion/$id/resumen': typeof InspeccionIdResumenRoute
@@ -66,6 +80,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
+  '/panel/$id': typeof PanelIdRoute
+  '/panel': typeof PanelIndexRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
   '/inspeccion/$id/resumen': typeof InspeccionIdResumenRoute
@@ -76,6 +92,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
+  '/panel/$id': typeof PanelIdRoute
+  '/panel/': typeof PanelIndexRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
   '/inspeccion/$id/resumen': typeof InspeccionIdResumenRoute
@@ -87,6 +105,8 @@ export interface FileRouteTypes {
     | '/'
     | '/acceso'
     | '/inspeccion/nueva'
+    | '/panel/$id'
+    | '/panel/'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
     | '/inspeccion/$id/resumen'
@@ -96,6 +116,8 @@ export interface FileRouteTypes {
     | '/'
     | '/acceso'
     | '/inspeccion/nueva'
+    | '/panel/$id'
+    | '/panel'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
     | '/inspeccion/$id/resumen'
@@ -105,6 +127,8 @@ export interface FileRouteTypes {
     | '/'
     | '/acceso'
     | '/inspeccion/nueva'
+    | '/panel/$id'
+    | '/panel/'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
     | '/inspeccion/$id/resumen'
@@ -115,6 +139,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccesoRoute: typeof AccesoRoute
   InspeccionNuevaRoute: typeof InspeccionNuevaRoute
+  PanelIdRoute: typeof PanelIdRoute
+  PanelIndexRoute: typeof PanelIndexRoute
   InspeccionIdDocumentoRoute: typeof InspeccionIdDocumentoRoute
   InspeccionIdFirmaRoute: typeof InspeccionIdFirmaRoute
   InspeccionIdResumenRoute: typeof InspeccionIdResumenRoute
@@ -142,6 +168,20 @@ declare module '@tanstack/react-router' {
       path: '/inspeccion/nueva'
       fullPath: '/inspeccion/nueva'
       preLoaderRoute: typeof InspeccionNuevaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/panel/': {
+      id: '/panel/'
+      path: '/panel'
+      fullPath: '/panel/'
+      preLoaderRoute: typeof PanelIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/panel/$id': {
+      id: '/panel/$id'
+      path: '/panel/$id'
+      fullPath: '/panel/$id'
+      preLoaderRoute: typeof PanelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inspeccion/$id/': {
@@ -179,6 +219,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccesoRoute: AccesoRoute,
   InspeccionNuevaRoute: InspeccionNuevaRoute,
+  PanelIdRoute: PanelIdRoute,
+  PanelIndexRoute: PanelIndexRoute,
   InspeccionIdDocumentoRoute: InspeccionIdDocumentoRoute,
   InspeccionIdFirmaRoute: InspeccionIdFirmaRoute,
   InspeccionIdResumenRoute: InspeccionIdResumenRoute,

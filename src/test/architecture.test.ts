@@ -57,18 +57,45 @@ describe('dependency rules', () => {
     expect(files.length).toBeGreaterThan(5)
   })
 
-  it('the domain imports nothing but zod and itself', () => {
+  /**
+   * The domain may import zod, itself, and ANOTHER MODULE'S domain — nothing
+   * else.
+   *
+   * Cross-domain references are deliberate, not a loophole: `approvalBlock`
+   * genuinely depends on what a Session is, and forbidding the import would
+   * only push us to duplicate the type. What stays banned is everything that
+   * makes a layer hard to test: React, Dexie, Supabase, application,
+   * infrastructure, ui, shared.
+   */
+  const domainAllowed = (spec: string) =>
+    spec === 'zod' ||
+    spec.startsWith('./') ||
+    spec.startsWith('../domain') ||
+    /^@\/modules\/[^/]+\/domain\//.test(spec)
+
+  it('the domain imports nothing but zod, itself and other domains', () => {
     const offenders = files
       .filter((f) => inLayer(f.path, 'domain'))
       .flatMap((f) =>
-        f.imports
-          .filter((spec) => spec !== 'zod')
-          .filter((spec) => spec.startsWith('@/') || spec.startsWith('.') === false)
-          .filter((spec) => !spec.startsWith('./') && !spec.startsWith('../domain'))
-          .map((spec) => `${f.path} -> ${spec}`),
+        f.imports.filter((spec) => !domainAllowed(spec)).map((spec) => `${f.path} -> ${spec}`),
       )
 
     expect(offenders, 'domain must stay an island: no React, no Dexie, no Supabase').toEqual([])
+  })
+
+  it('the domain rule still rejects everything that matters', () => {
+    // A guard for the guard: widening the rule must not have opened the door.
+    expect(domainAllowed('react')).toBe(false)
+    expect(domainAllowed('dexie')).toBe(false)
+    expect(domainAllowed('@supabase/supabase-js')).toBe(false)
+    expect(domainAllowed('@/shared/db/db')).toBe(false)
+    expect(domainAllowed('@/app/container')).toBe(false)
+    expect(domainAllowed('@/modules/auth/infrastructure/supabase-client')).toBe(false)
+    expect(domainAllowed('@/modules/auth/application/ports')).toBe(false)
+    expect(domainAllowed('../infrastructure/dexie-photo.repository')).toBe(false)
+
+    expect(domainAllowed('zod')).toBe(true)
+    expect(domainAllowed('@/modules/auth/domain/session')).toBe(true)
   })
 
   it('the application layer never touches infrastructure', () => {

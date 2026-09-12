@@ -193,6 +193,36 @@ inspección por clave foránea y sola sería rechazada.
 Y aparecen en el PDF, en páginas de anexo aparte para que el formulario de
 arriba siga siendo fiel a la planilla que Prevención compara.
 
+## El panel del supervisor
+
+`/panel` es la mitad **con conexión** de la línea que se trazó el día uno. Acá
+sí se usa TanStack Query: el supervisor lee de un servidor, hay algo que
+cachear y revalidar. En `/inspeccion` no se usa, porque ahí la verdad está en
+el teléfono y no hay nada que refrescar.
+
+Lee de dos vistas con `security_invoker`, no de tablas sueltas:
+`inspection_answers` (respuestas ya unidas a su etiqueta y en orden de
+impresión) e `inspection_summaries` (conteos, para no traer 51 respuestas solo
+para mostrar "3 hallazgos").
+
+### Separación de funciones
+
+Un inspector ascendido a supervisor **no puede aprobar una inspección que él
+mismo declaró**. El formulario tiene dos bloques de firma porque otra persona
+revisa; una aprobación firmada por el autor es un timbre de goma disfrazado de
+revisión.
+
+Está en dos capas a propósito: el dominio da un mensaje entendible, y
+`approve_inspection` lo hace verdad. Si la regla viviera solo en la interfaz,
+sería una sugerencia.
+
+### Una trampa con nombre propio
+
+`count()` en Postgres es `bigint`, y PostgREST lo serializa como **texto** para
+no perder precisión en JSON. Sin convertir, `yesCount + noCount + naCount`
+daría `"4632"` en vez de `51` — y ese número terminaría impreso. La conversión
+vive en `row-mapping.ts` con su test.
+
 ## Sin backend también funciona
 
 Sin `VITE_SUPABASE_URL` la app arranca igual: se inspecciona, se firma y se
@@ -208,7 +238,7 @@ estado roto.
 - [x] Fase 4 — Supabase: esquema, RLS, aprobación, seed y auth
 - [x] Fase 5 — cola de salida y worker de sincronización
 - [x] Fase 6 — fotos de evidencia con anexo en el PDF
-- [ ] Fase 7 — aprobación del supervisor
+- [x] Fase 7 — panel del supervisor y aprobación
 - [ ] Fase 8 — panel de hallazgos
 
 ## Pendiente con el cliente

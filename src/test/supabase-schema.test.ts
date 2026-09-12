@@ -45,6 +45,12 @@ beforeAll(async () => {
   await db.exec(
     readFileSync(join(process.cwd(), 'supabase/migrations/20260912010000_evidence_photos.sql'), 'utf8'),
   )
+  await db.exec(
+    readFileSync(join(process.cwd(), 'supabase/migrations/20260912020000_panel_views.sql'), 'utf8'),
+  )
+  await db.exec(
+    readFileSync(join(process.cwd(), 'supabase/migrations/20260912030000_separation_of_duties.sql'), 'utf8'),
+  )
 
   await db.exec(`
     insert into auth.users (id, email) values
@@ -424,5 +430,105 @@ describe('evidence photos', () => {
     await asOwner()
     await expect(db.exec(`update answer_photos set storage_path = 'x'`)).rejects.toThrow(/immutable/)
     await expect(db.exec(`delete from answer_photos`)).rejects.toThrow(/immutable/)
+  })
+})
+
+describe('panel views', () => {
+  beforeEach(async () => {
+    await actAs(INSPECTOR)
+    await submit()
+  })
+
+  it('joins each answer to its label and section', async () => {
+    await actAs(SUPERVISOR)
+    const r = await db.query<{
+      item_code: string
+      item_label: string
+      section_title: string
+      value: string
+    }>(`select item_code, item_label, section_title, value
+        from inspection_answers order by section_position, item_position`)
+
+    expect(r.rows).toHaveLength(2)
+    expect(r.rows[0]).toMatchObject({
+      item_code: '1.1',
+      item_label: 'Neumáticos del. y tras. en buen estado',
+      section_title: 'Inspección exterior del camión',
+      value: 'NO',
+    })
+  })
+
+  it('does not leak answers to another organisation', async () => {
+    await actAs(OUTSIDER)
+    expect((await db.query('select 1 from inspection_answers')).rows).toHaveLength(0)
+    expect((await db.query('select 1 from inspection_summaries')).rows).toHaveLength(0)
+  })
+
+  it('tallies an inspection without pulling every answer', async () => {
+    await actAs(SUPERVISOR)
+    const r = await db.query<{
+      plate: string
+      yes_count: string
+      no_count: string
+      na_count: string
+      status: string
+    }>('select plate, yes_count, no_count, na_count, status from inspection_summaries')
+
+    expect(r.rows[0]).toMatchObject({ plate: 'KRDM12', status: 'submitted' })
+    expect(Number(r.rows[0]!.yes_count)).toBe(1)
+    expect(Number(r.rows[0]!.no_count)).toBe(1)
+    expect(Number(r.rows[0]!.na_count)).toBe(0)
+  })
+
+  it('shows who approved it once approved', async () => {
+    await actAs(SUPERVISOR)
+    await db.query(`select approve_inspection($1::uuid, 'p.png')`, [INSPECTION_ID])
+
+    const r = await db.query<{ status: string; approved_by_name: string }>(
+      'select status, approved_by_name from inspection_summaries',
+    )
+    expect(r.rows[0]).toMatchObject({ status: 'approved', approved_by_name: 'Ana Soto' })
+  })
+
+  it('counts an inspection with no answers as zero rather than hiding it', async () => {
+    await asOwner()
+    await db.exec(`set session_replication_role = replica; delete from answers; set session_replication_role = origin;`)
+    await actAs(SUPERVISOR)
+
+    const r = await db.query<{ answered_count: string }>('select answered_count from inspection_summaries')
+    expect(r.rows).toHaveLength(1)
+    expect(Number(r.rows[0]!.answered_count)).toBe(0)
+  })
+})
+
+describe('separation of duties', () => {
+  it('refuses to let a supervisor approve an inspection they declared themselves', async () => {
+    // Promote the inspector, then have them try to sign off their own work.
+    await actAs(INSPECTOR)
+    await submit()
+
+    await asOwner()
+    await db.exec(`update profiles set role = 'supervisor' where id = '${INSPECTOR}'`)
+    await actAs(INSPECTOR)
+
+    await expect(
+      db.query(`select approve_inspection($1::uuid, null)`, [INSPECTION_ID]),
+    ).rejects.toThrow(/approved by the person who declared it/)
+
+    const r = await db.query<{ status: string }>('select status from inspections')
+    expect(r.rows[0]?.status).toBe('submitted')
+
+    await asOwner()
+    await db.exec(`update profiles set role = 'inspector' where id = '${INSPECTOR}'`)
+  })
+
+  it('still lets a different supervisor approve it', async () => {
+    await actAs(INSPECTOR)
+    await submit()
+    await actAs(SUPERVISOR)
+
+    await db.query(`select approve_inspection($1::uuid, null)`, [INSPECTION_ID])
+    const r = await db.query<{ status: string }>('select status from inspections')
+    expect(r.rows[0]?.status).toBe('approved')
   })
 })
