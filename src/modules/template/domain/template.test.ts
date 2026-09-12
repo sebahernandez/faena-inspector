@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { countItems, findItem, templateSchema } from './template'
-import { CAMION_MULTIUSO_V1 } from '../infrastructure/template-seed'
+import { CAMION_MULTIUSO_V1, itemUuid } from '../infrastructure/template-seed'
 
 describe('CAMION_MULTIUSO_V1 seed', () => {
   it('matches the template schema', () => {
@@ -36,7 +36,7 @@ describe('CAMION_MULTIUSO_V1 seed', () => {
   })
 
   it('finds an item by id', () => {
-    expect(findItem(CAMION_MULTIUSO_V1, 'item-5-6')?.label).toBe('Alarma de retroceso operativa')
+    expect(findItem(CAMION_MULTIUSO_V1, itemUuid(5, 6))?.label).toBe('Alarma de retroceso operativa')
     expect(findItem(CAMION_MULTIUSO_V1, 'nope')).toBeUndefined()
   })
 })

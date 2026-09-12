@@ -27,6 +27,7 @@ import { submitInspection } from '@/modules/inspection/application/use-cases/sub
 import { exportInspectionPdf } from '@/modules/inspection/application/use-cases/export-pdf'
 import { createReactPdfExporter } from '@/modules/inspection/infrastructure/pdf/react-pdf-exporter'
 import type { DeclaredBy, TemplateReader } from '@/modules/inspection/application/ports'
+import { createSupabaseAuthGateway } from '@/modules/auth/infrastructure/supabase-auth.gateway'
 import { db } from '@/shared/db/db'
 import { newId } from '@/shared/lib/id'
 
@@ -34,6 +35,13 @@ export const clock: Clock = { now: () => new Date() }
 export const ids: IdGenerator = { next: newId }
 export const inspections = createDexieInspectionRepository(db)
 export const pdf = createReactPdfExporter()
+
+/**
+ * Sync is optional. With no Supabase project configured the gateway reports
+ * `isConfigured() === false` and the inspector side keeps working entirely
+ * offline — that is a supported way to run this app, not a broken state.
+ */
+export const auth = createSupabaseAuthGateway()
 
 const templates: TemplateReader = {
   find: async (id) => (await getTemplate(id, db)) ?? null,

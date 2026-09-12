@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccesoRouteImport } from './routes/acceso'
 import { Route as InspeccionNuevaRouteImport } from './routes/inspeccion.nueva'
 import { Route as InspeccionIdIndexRouteImport } from './routes/inspeccion.$id.index'
 import { Route as InspeccionIdDocumentoRouteImport } from './routes/inspeccion.$id.documento'
@@ -19,6 +20,11 @@ import { Route as InspeccionIdResumenRouteImport } from './routes/inspeccion.$id
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccesoRoute = AccesoRouteImport.update({
+  id: '/acceso',
+  path: '/acceso',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InspeccionNuevaRoute = InspeccionNuevaRouteImport.update({
@@ -49,6 +55,7 @@ const InspeccionIdResumenRoute = InspeccionIdResumenRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/acceso'
     | '/inspeccion/nueva'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/acceso'
     | '/inspeccion/nueva'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/acceso'
     | '/inspeccion/nueva'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
@@ -101,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccesoRoute: typeof AccesoRoute
   InspeccionNuevaRoute: typeof InspeccionNuevaRoute
   InspeccionIdDocumentoRoute: typeof InspeccionIdDocumentoRoute
   InspeccionIdFirmaRoute: typeof InspeccionIdFirmaRoute
@@ -115,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acceso': {
+      id: '/acceso'
+      path: '/acceso'
+      fullPath: '/acceso'
+      preLoaderRoute: typeof AccesoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inspeccion/nueva': {
@@ -157,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccesoRoute: AccesoRoute,
   InspeccionNuevaRoute: InspeccionNuevaRoute,
   InspeccionIdDocumentoRoute: InspeccionIdDocumentoRoute,
   InspeccionIdFirmaRoute: InspeccionIdFirmaRoute,

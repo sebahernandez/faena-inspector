@@ -15,13 +15,27 @@
  */
 import type { Template, TemplateSection } from '../domain/template'
 
+/**
+ * Ids are deterministic UUIDs, not `item-1-1` strings.
+ *
+ * The device and the server must agree on these forever: an answer points at
+ * an item by id, and a signed inspection has to reprint identically years from
+ * now. `supabase/seed.sql` is generated from this file with the same functions,
+ * and a test fails if the two ever disagree.
+ */
+export const TEMPLATE_UUID = '00000000-0000-4000-8000-000000000001'
+export const sectionUuid = (position: number): string =>
+  `00000000-0000-4000-8000-0000000001${String(position).padStart(2, '0')}`
+export const itemUuid = (position: number, index: number): string =>
+  `00000000-0000-4000-8000-0000${String(position).padStart(4, '0')}${String(index).padStart(4, '0')}`
+
 const section = (position: number, title: string, labels: string[]): TemplateSection => ({
-  id: `sec-${position}`,
+  id: sectionUuid(position),
   position,
   code: String(position),
   title,
   items: labels.map((label, index) => ({
-    id: `item-${position}-${index + 1}`,
+    id: itemUuid(position, index + 1),
     position: index + 1,
     code: `${position}.${index + 1}`,
     label,
@@ -29,7 +43,7 @@ const section = (position: number, title: string, labels: string[]): TemplateSec
 })
 
 export const CAMION_MULTIUSO_V1: Template = {
-  id: 'tpl-camion-multiuso',
+  id: TEMPLATE_UUID,
   name: 'Lista de Chequeo Camión Multiuso',
   version: 1,
   effectiveFrom: '2026-01-01',

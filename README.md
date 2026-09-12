@@ -103,13 +103,56 @@ Dos decisiones del renderizador que no son cosméticas:
   Prevención compara contra el formulario en papel, eso se lee como una copia
   descuidada.
 
+## La base de datos
+
+El esquema vive en `supabase/migrations/`. **Se ejecuta en los tests**: PGlite
+es Postgres compilado a WebAssembly, así que `src/test/supabase-schema.test.ts`
+aplica la migración de verdad y comprueba las políticas contra el motor real,
+no contra una suposición.
+
+La regla que sostiene todo: **una inspección firmada no se puede editar.**
+Está defendida en tres capas, porque una sola no alcanza:
+
+| Capa | Qué cubre |
+|---|---|
+| Permisos | Por defecto solo hay `select`. Un `update` falla con "permission denied". |
+| Políticas RLS | Si alguien concediera `update`, la política lo rechaza en voz alta. Sin ellas, RLS filtra las filas y el `update` *reporta éxito sobre cero filas* — silencio, justo lo que no querés en un documento legal. |
+| Triggers | Se disparan para **todos**, incluido el dueño de la tabla y `service_role`, que saltan RLS por completo. Solo dejan pasar las columnas de aprobación. |
+
+Las escrituras entran por dos funciones `security definer`:
+
+- `submit_inspection(inspection, answers)` — **idempotente**. El id lo genera el
+  teléfono, así que reintentar mil veces deja una sola inspección. El `org_id` y
+  el autor los estampa el servidor; el cliente nunca elige su organización.
+- `approve_inspection(id, firma)` — lo único que escribe las tres columnas de
+  aprobación, y solo si quien llama es supervisor de esa organización.
+
+`findings` es una **vista** sobre las respuestas `NO`, con `security_invoker`
+para que el RLS de las tablas de abajo aplique al que consulta. Sin esa opción
+una vista corre con los permisos de su dueño y filtra datos entre empresas.
+
+## El seed
+
+`supabase/seed.sql` se genera desde el seed de TypeScript con
+`npm run seed:generate`. Los ids de los 51 ítems son UUIDs deterministas y
+**tienen que ser los mismos en el teléfono y en el servidor**: una respuesta
+apunta a un ítem por id. Si divergieran, toda inspección llenada antes de la
+primera sincronización subiría apuntando a ítems inexistentes y el documento
+firmado volvería en blanco. Hay un test que falla si los dos archivos se separan.
+
+## Sin backend también funciona
+
+Sin `VITE_SUPABASE_URL` la app arranca igual: se inspecciona, se firma y se
+genera el PDF. Simplemente no sincroniza. Es un modo de operación válido, no un
+estado roto.
+
 ## Estado
 
 - [x] Fase 0 — proyecto, PWA, regla de arquitectura verificada
 - [x] Fase 1 — dominio, base local, seed de 51 ítems
 - [x] Fase 2 — captura completa offline, borrador reanudable
 - [x] Fase 3 — firma en canvas + PDF fiel al Excel, generado sin red
-- [ ] Fase 4 — Supabase (esquema, RLS, auth)
+- [x] Fase 4 — Supabase: esquema, RLS, aprobación, seed y auth
 - [ ] Fase 5 — cola de sincronización
 - [ ] Fase 6 — fotos de evidencia
 - [ ] Fase 7 — aprobación del supervisor

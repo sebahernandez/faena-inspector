@@ -11,11 +11,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "seed:generate": "node scripts/generate-seed.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
     "@react-pdf/renderer": "^4.9.0",
+    "@supabase/supabase-js": "^2.116.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-router": "^1.170.35",
@@ -32,6 +34,7 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tanstack/router-plugin": "^1.168.37",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
