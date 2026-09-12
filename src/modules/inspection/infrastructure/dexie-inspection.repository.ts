@@ -81,6 +81,14 @@ export function createDexieInspectionRepository(db: FaenaDB = defaultDb): Inspec
         })
       })
     },
+
+    /** A draft and its answers disappear together, or not at all. */
+    async discard(id: string) {
+      await db.transaction('rw', db.inspections, db.answers, async () => {
+        await db.answers.where('inspectionId').equals(id).delete()
+        await db.inspections.delete(id)
+      })
+    },
   }
 }
 
@@ -90,6 +98,12 @@ export function createDexieInspectionRepository(db: FaenaDB = defaultDb): Inspec
 
 export const listDrafts = (db: FaenaDB = defaultDb) =>
   db.inspections.where('status').equals('draft').reverse().sortBy('updatedAt')
+
+export const findInspection = (id: string, db: FaenaDB = defaultDb) =>
+  db.inspections.get(id)
+
+export const listAnswersOf = (inspectionId: string, db: FaenaDB = defaultDb) =>
+  db.answers.where('inspectionId').equals(inspectionId).toArray()
 
 export const listPendingUpload = (db: FaenaDB = defaultDb) =>
   db.inspections.where('[status+syncState]').equals(['submitted', 'queued']).toArray()

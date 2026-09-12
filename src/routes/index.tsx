@@ -1,36 +1,72 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { countItems } from '@/modules/template/domain/template'
+import { format } from 'date-fns'
 import { queries } from '@/app/container'
+import { countItems } from '@/modules/template/domain/template'
 
 export const Route = createFileRoute('/')({ component: Home })
 
 function Home() {
-  // The local database IS the state. These re-render on their own whenever
-  // anything writes — another component, the sync worker, even another tab.
-  const draftCount = useLiveQuery(queries.draftCount, [], 0)
+  // The local database IS the state. These update on their own on every write.
+  const drafts = useLiveQuery(queries.drafts, [], [])
+  const pending = useLiveQuery(queries.pendingUpload, [], [])
   const template = useLiveQuery(queries.activeTemplate, [], null)
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-xl font-semibold">Lista de chequeo</h1>
-      <dl className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <dt className="text-sm text-slate-500">Plantilla activa</dt>
-          <dd className="font-medium">
-            {template ? `${template.name} · v${template.version}` : 'Cargando…'}
-          </dd>
+    <section className="space-y-6">
+      {pending.length > 0 && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>{pending.length}</strong>{' '}
+          {pending.length === 1 ? 'inspección firmada sin enviar' : 'inspecciones firmadas sin enviar'}.
+          Se subirán solas cuando haya señal.
+        </p>
+      )}
+
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Inspecciones</h1>
+          {template && (
+            <p className="text-sm text-slate-500">
+              {template.name} · v{template.version} · {countItems(template)} ítems
+            </p>
+          )}
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <dt className="text-sm text-slate-500">Ítems</dt>
-          <dd className="font-medium">{template ? countItems(template) : '—'}</dd>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <dt className="text-sm text-slate-500">Borradores</dt>
-          <dd className="font-medium">{draftCount}</dd>
-        </div>
-      </dl>
-      <p className="text-sm text-slate-500">Fase 1 — dominio y base local listos.</p>
+        <Link
+          to="/inspeccion/nueva"
+          className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 font-medium text-white"
+        >
+          Nueva
+        </Link>
+      </div>
+
+      {drafts.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+          No hay inspecciones en curso.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {drafts.map((draft) => (
+            <li key={draft.id}>
+              <Link
+                to="/inspeccion/$id"
+                params={{ id: draft.id }}
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4"
+              >
+                <span>
+                  <span className="block font-semibold">{draft.plate}</span>
+                  <span className="block text-sm text-slate-500">
+                    {draft.driverName ?? 'Sin conductor'} ·{' '}
+                    {format(new Date(draft.inspectedAt), 'dd/MM/yyyy HH:mm')}
+                  </span>
+                </span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  Borrador
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   )
 }

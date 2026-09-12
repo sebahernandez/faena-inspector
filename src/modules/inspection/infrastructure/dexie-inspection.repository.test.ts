@@ -178,6 +178,38 @@ describe('submit', () => {
   })
 })
 
+describe('discard', () => {
+  it('removes the draft and its answers in one transaction', async () => {
+    const inspection = draft()
+    await repository.create(inspection)
+    await repository.putAnswer({
+      inspectionId: inspection.id,
+      itemId: 'item-1-1',
+      value: 'NO',
+      observation: 'Neumático liso',
+      responsible: 'J. Pérez',
+      dueDate: '2026-04-01',
+      updatedAt: '2026-03-01T12:00:00.000Z',
+    })
+
+    await repository.discard(inspection.id)
+
+    expect(await repository.find(inspection.id)).toBeNull()
+    expect(await repository.listAnswers(inspection.id)).toEqual([])
+  })
+
+  it('leaves other inspections untouched', async () => {
+    const keep = draft({ plate: 'KEEP11' })
+    const drop = draft({ plate: 'DROP22' })
+    await repository.create(keep)
+    await repository.create(drop)
+
+    await repository.discard(drop.id)
+
+    expect((await listDrafts(db)).map((i) => i.plate)).toEqual(['KEEP11'])
+  })
+})
+
 describe('queries', () => {
   it('lists drafts and pending uploads separately', async () => {
     await repository.create(draft({ plate: 'AAA111' }))

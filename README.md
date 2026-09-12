@@ -82,12 +82,17 @@ Zustand: duplicarían la verdad en dos lugares.
 - **`submitInspection` no hace ninguna llamada de red.** Firmar es un hecho
   local. Si algún día aparece un `await fetch` ahí, el producto está roto — y
   hay un test que lo impide.
+- **El texto libre se acumula, no se reemplaza.** Un debounce común guarda UN
+  valor pendiente y cada llamada nueva lo pisa: escribir la observación y pasar
+  a "Responsable" dentro del retardo cancelaba la observación. `usePatchBuffer`
+  fusiona por ítem y descarga el buffer al desmontar y al bloquear la pantalla.
+  Encontrado manejando la UI real, no en los tests.
 
 ## Estado
 
 - [x] Fase 0 — proyecto, PWA, regla de arquitectura verificada
-- [x] Fase 1 — dominio, base local, seed de 51 ítems, 39 tests
-- [ ] Fase 2 — captura completa offline
+- [x] Fase 1 — dominio, base local, seed de 51 ítems
+- [x] Fase 2 — captura completa offline, borrador reanudable
 - [ ] Fase 3 — firma + PDF
 - [ ] Fase 4 — Supabase (esquema, RLS, auth)
 - [ ] Fase 5 — cola de sincronización

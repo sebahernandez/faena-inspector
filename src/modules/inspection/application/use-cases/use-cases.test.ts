@@ -10,6 +10,8 @@ import type { Clock, DeclaredBy, IdGenerator, InspectionRepository } from '../po
 import { startInspection } from './start-inspection'
 import { answerItem, InspectionNotEditableError, InspectionNotFoundError } from './answer-item'
 import { IncompleteInspectionError, submitInspection } from './submit-inspection'
+import { updateHeader } from './update-header'
+import { discardDraft } from './discard-draft'
 
 class FakeRepository implements InspectionRepository {
   inspections = new Map<string, Inspection>()
@@ -35,6 +37,12 @@ class FakeRepository implements InspectionRepository {
   async submit(id: string, _signature: Blob, declaredBy: DeclaredBy) {
     this.submitted.push({ id, declaredBy })
     await this.update(id, { status: 'submitted', syncState: 'queued' })
+  }
+  async discard(id: string) {
+    this.inspections.delete(id)
+    for (const key of [...this.answers.keys()]) {
+      if (key.startsWith(`${id}:`)) this.answers.delete(key)
+    }
   }
 }
 
@@ -175,5 +183,56 @@ describe('submitInspection', () => {
     await expect(
       submitInspection({ inspectionId: id, signature, declaredBy, totalItems: 1 }, { repository, clock }),
     ).rejects.toBeInstanceOf(InspectionNotEditableError)
+  })
+})
+
+describe('updateHeader', () => {
+  const start = () =>
+    startInspection({ templateId: 'tpl', templateVersion: 1, plate: 'AB1234' }, { repository, clock, ids })
+
+  it('normalises the plate on edit', async () => {
+    const { id } = await start()
+    await updateHeader(id, { plate: ' xyz789 ' }, { repository, clock })
+    expect((await repository.find(id))?.plate).toBe('XYZ789')
+  })
+
+  it('stores general observations', async () => {
+    const { id } = await start()
+    await updateHeader(id, { generalObservations: 'Revisar en taller' }, { repository, clock })
+    expect((await repository.find(id))?.generalObservations).toBe('Revisar en taller')
+  })
+
+  it('refuses to edit a submitted inspection', async () => {
+    const { id } = await start()
+    await repository.update(id, { status: 'submitted' })
+    await expect(updateHeader(id, { driverName: 'Otro' }, { repository, clock })).rejects.toBeInstanceOf(
+      InspectionNotEditableError,
+    )
+  })
+})
+
+describe('discardDraft', () => {
+  it('removes the draft and its answers', async () => {
+    const { id } = await startInspection(
+      { templateId: 'tpl', templateVersion: 1, plate: 'AB1234' },
+      { repository, clock, ids },
+    )
+    await answerItem({ inspectionId: id, itemId: 'a', value: 'YES' }, { repository, clock })
+
+    await discardDraft(id, { repository })
+
+    expect(await repository.find(id)).toBeNull()
+    expect(await repository.listAnswers(id)).toEqual([])
+  })
+
+  it('never discards a submitted inspection — it is a legal document', async () => {
+    const { id } = await startInspection(
+      { templateId: 'tpl', templateVersion: 1, plate: 'AB1234' },
+      { repository, clock, ids },
+    )
+    await repository.update(id, { status: 'submitted' })
+
+    await expect(discardDraft(id, { repository })).rejects.toBeInstanceOf(InspectionNotEditableError)
+    expect(await repository.find(id)).not.toBeNull()
   })
 })

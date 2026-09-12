@@ -19,3 +19,6 @@ export async function getActiveTemplate(db: FaenaDB = defaultDb): Promise<Templa
   // Highest version wins when more than one is active.
   return active.sort((a, b) => b.version - a.version)[0] ?? null
 }
+
+export const getTemplate = (id: string, db: FaenaDB = defaultDb): Promise<Template | undefined> =>
+  db.templates.get(id)

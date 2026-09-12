@@ -15,6 +15,8 @@ export interface InspectionRepository {
   listAnswers(inspectionId: string): Promise<Answer[]>
   /** Writes header, signature and outbox entry in ONE transaction. */
   submit(id: string, signature: Blob, declaredBy: DeclaredBy): Promise<void>
+  /** Drops a draft and its answers together. Only drafts may be discarded. */
+  discard(id: string): Promise<void>
 }
 
 export interface DeclaredBy {
