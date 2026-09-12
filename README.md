@@ -140,6 +140,36 @@ apunta a un ítem por id. Si divergieran, toda inspección llenada antes de la
 primera sincronización subiría apuntando a ítems inexistentes y el documento
 firmado volvería en blanco. Hay un test que falla si los dos archivos se separan.
 
+## La cola de salida
+
+Firmar es un hecho **local**: escribe tres tablas y encola. Subir es trabajo de
+otro, después. El worker (`src/modules/sync/`) drena la cola con estas reglas:
+
+- **De a uno, en orden.** Veinte subidas simultáneas desde un teléfono con una
+  barra de señal son veinte timeouts, no veinte éxitos.
+- **Un registro envenenado no bloquea la cola.** Un fallo permanente se aparca
+  y el drenaje sigue. Si no, una sola inspección malformada impediría que
+  cualquier otra llegue jamás al servidor.
+- **Quedarse sin sesión no es un fallo.** Sin sesión no se intenta nada y no se
+  gasta intento, así que un teléfono deslogueado no quema su presupuesto de
+  reintentos y aparca trabajo perfectamente válido.
+- **Backoff exponencial con jitter.** El jitter importa más de lo que parece:
+  una cuadrilla entera sale de la zona muerta en el mismo momento, y sin él
+  todos los teléfonos golpearían el servidor en el mismo segundo.
+- **Reintentar no duplica.** El id lo genera el teléfono y `submit_inspection`
+  hace `on conflict do nothing`. Si la conexión se corta después de que el
+  servidor confirmó pero antes de que llegue la respuesta, el siguiente intento
+  es un no-op.
+
+Cuándo se dispara: al abrir la app, al volver la red, al volver al primer plano,
+y con un tick de respaldo mientras la app está abierta. **En iPhone no existe la
+sincronización en segundo plano** — un teléfono en el bolsillo no sube nada. El
+diseño asume eso en vez de fingir lo contrario.
+
+`src/test/sync-roundtrip.test.ts` prueba el viaje completo con los dos extremos
+reales: Dexie sobre fake-indexeddb y el servidor sobre PGlite ejecutando la
+migración de verdad. Una columna renombrada falla ahí, no en un camión.
+
 ## Sin backend también funciona
 
 Sin `VITE_SUPABASE_URL` la app arranca igual: se inspecciona, se firma y se
@@ -153,7 +183,7 @@ estado roto.
 - [x] Fase 2 — captura completa offline, borrador reanudable
 - [x] Fase 3 — firma en canvas + PDF fiel al Excel, generado sin red
 - [x] Fase 4 — Supabase: esquema, RLS, aprobación, seed y auth
-- [ ] Fase 5 — cola de sincronización
+- [x] Fase 5 — cola de salida y worker de sincronización
 - [ ] Fase 6 — fotos de evidencia
 - [ ] Fase 7 — aprobación del supervisor
 - [ ] Fase 8 — panel de hallazgos

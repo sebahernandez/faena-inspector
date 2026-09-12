@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { format } from 'date-fns'
 import { queries } from '@/app/container'
 import { countItems } from '@/modules/template/domain/template'
+import { SyncBanner } from '@/modules/sync/ui/SyncBanner'
+import { useSession } from '@/modules/auth/ui/use-session'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -10,18 +12,12 @@ function Home() {
   // The local database IS the state. These update on their own on every write.
   const drafts = useLiveQuery(queries.drafts, [], [])
   const signed = useLiveQuery(queries.submitted, [], [])
-  const pending = useLiveQuery(queries.pendingUpload, [], [])
+  const { configured } = useSession()
   const template = useLiveQuery(queries.activeTemplate, [], null)
 
   return (
     <section className="space-y-6">
-      {pending.length > 0 && (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong>{pending.length}</strong>{' '}
-          {pending.length === 1 ? 'inspección firmada sin enviar' : 'inspecciones firmadas sin enviar'}.
-          Se subirán solas cuando haya señal.
-        </p>
-      )}
+      <SyncBanner />
 
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -87,14 +83,19 @@ function Home() {
                       {format(new Date(item.inspectedAt), 'dd/MM/yyyy HH:mm')}
                     </span>
                   </span>
+                  {/*
+                    With no backend configured nothing will ever be sent, so
+                    "Por enviar" would be a lie. The badge has to describe the
+                    world the inspector is actually in.
+                  */}
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      item.syncState === 'synced'
+                      !configured || item.syncState === 'synced'
                         ? 'bg-emerald-100 text-emerald-800'
                         : 'bg-amber-100 text-amber-800'
                     }`}
                   >
-                    {item.syncState === 'synced' ? 'Enviada' : 'Por enviar'}
+                    {!configured ? 'Firmada' : item.syncState === 'synced' ? 'Enviada' : 'Por enviar'}
                   </span>
                 </Link>
               </li>

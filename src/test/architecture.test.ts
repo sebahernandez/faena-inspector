@@ -96,16 +96,42 @@ describe('dependency rules', () => {
     expect(offenders, 'the UI reaches data through a use case, never through infrastructure').toEqual([])
   })
 
-  it('no submit path performs a network call', () => {
-    // Submitting is a LOCAL fact. The upload is the sync worker's job, later.
+  it('no domain or application code performs a network call', () => {
+    /**
+     * Submitting is a LOCAL fact; the upload is the sync worker's job, later.
+     *
+     * This checks what the code DOES, not what it mentions. An earlier version
+     * grepped for the word "supabase" and flagged a prose comment — a rule that
+     * cries wolf is a rule people start ignoring.
+     */
+    const NETWORK_CALLS = /\bfetch\s*\(|\bXMLHttpRequest\b|\bnew WebSocket\b|sendBeacon\s*\(|\bEventSource\b/
+    const NETWORK_CLIENTS = /^(@supabase\/|axios$|ky$|got$|superagent$)/
+
     const offenders = files
       .filter((f) => inLayer(f.path, 'domain') || inLayer(f.path, 'application'))
-      .filter((f) => {
+      .flatMap((f) => {
+        const reasons: string[] = []
         const source = readFileSync(join(SRC, f.path), 'utf8')
-        return /\bfetch\s*\(|supabase/i.test(source)
+        if (NETWORK_CALLS.test(source)) reasons.push(`${f.path}: makes a network call`)
+        for (const spec of f.imports) {
+          if (NETWORK_CLIENTS.test(spec)) reasons.push(`${f.path}: imports ${spec}`)
+        }
+        return reasons
       })
-      .map((f) => f.path)
 
     expect(offenders, 'no network in domain or application — that would break offline-first').toEqual([])
+  })
+
+  it('the rule above actually catches a violation', () => {
+    // A guard for the guard: a typo in the regex would silently pass forever.
+    const NETWORK_CALLS = /\bfetch\s*\(|\bXMLHttpRequest\b|\bnew WebSocket\b|sendBeacon\s*\(|\bEventSource\b/
+    expect(NETWORK_CALLS.test('await fetch(url)')).toBe(true)
+    expect(NETWORK_CALLS.test('new WebSocket(url)')).toBe(true)
+    expect(NETWORK_CALLS.test('navigator.sendBeacon(url)')).toBe(true)
+    expect(NETWORK_CALLS.test('// we deliberately do not talk to supabase here')).toBe(false)
+
+    const NETWORK_CLIENTS = /^(@supabase\/|axios$|ky$|got$|superagent$)/
+    expect(NETWORK_CLIENTS.test('@supabase/supabase-js')).toBe(true)
+    expect(NETWORK_CLIENTS.test('./supabase-payload')).toBe(false)
   })
 })

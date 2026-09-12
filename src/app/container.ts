@@ -28,6 +28,10 @@ import { exportInspectionPdf } from '@/modules/inspection/application/use-cases/
 import { createReactPdfExporter } from '@/modules/inspection/infrastructure/pdf/react-pdf-exporter'
 import type { DeclaredBy, TemplateReader } from '@/modules/inspection/application/ports'
 import { createSupabaseAuthGateway } from '@/modules/auth/infrastructure/supabase-auth.gateway'
+import { createDexieOutboxRepository } from '@/modules/sync/infrastructure/dexie-outbox.repository'
+import { createDexieSyncSource } from '@/modules/sync/infrastructure/dexie-sync-source'
+import { createSupabaseRemoteGateway } from '@/modules/sync/infrastructure/supabase-remote.gateway'
+import { createSyncScheduler } from '@/modules/sync/application/scheduler'
 import { db } from '@/shared/db/db'
 import { newId } from '@/shared/lib/id'
 
@@ -43,6 +47,22 @@ export const pdf = createReactPdfExporter()
  */
 export const auth = createSupabaseAuthGateway()
 
+export const outbox = createDexieOutboxRepository(db)
+
+/**
+ * The only component that talks to the network. Everything else reads and
+ * writes the local database and never waits for a server.
+ */
+export const sync = createSyncScheduler({
+  outbox,
+  remote: createSupabaseRemoteGateway(db),
+  source: createDexieSyncSource(db),
+  clock,
+  // A hint, not proof: onLine is true on wifi with no internet. A failed
+  // attempt is what actually tells us, and the queue handles that.
+  isOnline: () => navigator.onLine,
+})
+
 const templates: TemplateReader = {
   find: async (id) => (await getTemplate(id, db)) ?? null,
 }
@@ -53,6 +73,8 @@ export const queries = {
   drafts: () => listDrafts(db),
   submitted: () => db.inspections.where('status').anyOf('submitted', 'approved').reverse().sortBy('inspectedAt'),
   pendingUpload: () => listPendingUpload(db),
+  outboxPending: () => outbox.countPending(),
+  outboxParked: () => outbox.countParked(),
   inspection: (id: string) => findInspection(id, db),
   answers: (id: string) => listAnswersOf(id, db),
   findings: (id: string) => listFindings(id, db),
@@ -78,4 +100,5 @@ export const actions = {
 
 export const bootstrap = async (): Promise<void> => {
   await ensureSeeded(db)
+  sync.start()
 }

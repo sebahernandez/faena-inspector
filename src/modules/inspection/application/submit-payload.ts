@@ -1,6 +1,10 @@
 /**
  * Translates a local inspection into the payload `submit_inspection` expects.
  *
+ * This is a contract, not infrastructure: it imports nothing from Supabase and
+ * builds a plain object. It lives in the application layer so the sync module
+ * can depend on the shape without depending on an implementation.
+ *
  * Deliberately dumb and total: every field is mapped explicitly so a renamed
  * column fails at compile time rather than silently dropping data from a legal
  * document.

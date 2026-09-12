@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toSubmitPayload, UnsignedInspectionError } from './supabase-payload'
+import { toSubmitPayload, UnsignedInspectionError } from './submit-payload'
 import { itemUuid, TEMPLATE_UUID } from '@/modules/template/infrastructure/template-seed'
 import type { Answer, Inspection } from '../domain/inspection'
 

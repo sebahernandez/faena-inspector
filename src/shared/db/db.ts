@@ -52,6 +52,8 @@ export interface OutboxEntry {
   nextAttemptAt: string
   lastError: string | null
   createdAt: string
+  /** Parked: the server refused it, or it ran out of attempts. Needs a human. */
+  parked?: 0 | 1
 }
 
 export interface MetaEntry {
@@ -82,7 +84,7 @@ class FaenaDB extends Dexie {
       inspections: 'id, plate, status, syncState, inspectedAt, [status+syncState]',
       answers: '[inspectionId+itemId], inspectionId, [inspectionId+value]',
       photos: 'id, inspectionId, [inspectionId+itemId], uploadState',
-      outbox: '++seq, &dedupeKey, entityId, nextAttemptAt',
+      outbox: '++seq, &dedupeKey, entityId, nextAttemptAt, parked',
       meta: 'key',
     })
   }
