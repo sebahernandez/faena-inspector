@@ -3,16 +3,30 @@ import type { TemplateItem } from '@/modules/template/domain/template'
 import type { Answer, AnswerValue } from '../../domain/inspection'
 import { AnswerToggle } from './AnswerToggle'
 import { FindingFields } from './FindingFields'
+import { EvidencePhotos } from './EvidencePhotos'
+import type { EvidencePhoto } from '../../domain/evidence'
 
 interface Props {
   item: TemplateItem
   answer: Answer | undefined
+  photos: EvidencePhoto[]
+  inspectionId: string
   disabled?: boolean
   onAnswer: (value: AnswerValue) => void
   onFindingChange: (patch: { observation?: string; responsible?: string; dueDate?: string }) => void
+  onPhotosChanged: () => void
 }
 
-export function ItemRow({ item, answer, disabled, onAnswer, onFindingChange }: Props) {
+export function ItemRow({
+  item,
+  answer,
+  photos,
+  inspectionId,
+  disabled,
+  onAnswer,
+  onFindingChange,
+  onPhotosChanged,
+}: Props) {
   // Local mirror so typing stays instant; the write is debounced by the parent.
   const [observation, setObservation] = useState(answer?.observation ?? '')
   const [responsible, setResponsible] = useState(answer?.responsible ?? '')
@@ -41,13 +55,22 @@ export function ItemRow({ item, answer, disabled, onAnswer, onFindingChange }: P
       <AnswerToggle value={answer?.value} onChange={onAnswer} {...(disabled ? { disabled } : {})} />
 
       {answer?.value === 'NO' && (
-        <FindingFields
-          observation={observation}
-          responsible={responsible}
-          dueDate={dueDate}
-          onChange={handleFinding}
-          {...(disabled ? { disabled } : {})}
-        />
+        <>
+          <FindingFields
+            observation={observation}
+            responsible={responsible}
+            dueDate={dueDate}
+            onChange={handleFinding}
+            {...(disabled ? { disabled } : {})}
+          />
+          <EvidencePhotos
+            inspectionId={inspectionId}
+            itemId={item.id}
+            photos={photos}
+            onChanged={onPhotosChanged}
+            {...(disabled ? { disabled } : {})}
+          />
+        </>
       )}
     </li>
   )

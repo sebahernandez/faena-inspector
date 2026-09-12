@@ -42,9 +42,23 @@ export async function drainOutbox(deps: DrainDeps): Promise<DrainResult> {
   const due = await deps.outbox.due(deps.clock.now())
 
   for (const entry of due) {
-    if (entry.kind !== 'inspection') continue
-
     try {
+      if (entry.kind === 'photo') {
+        const photo = await deps.source.loadPhotoForUpload(entry.entityId)
+
+        // Deleted from the draft before it ever left, or already uploaded.
+        if (!photo) {
+          await deps.outbox.remove(entry.seq)
+          continue
+        }
+
+        const path = await deps.remote.uploadPhoto(photo)
+        await deps.source.markPhotoSynced(entry.entityId, path)
+        await deps.outbox.remove(entry.seq)
+        result.uploaded++
+        continue
+      }
+
       const payload = await deps.source.loadForUpload(entry.entityId)
 
       // The inspection is gone from this device. Nothing to upload and nothing

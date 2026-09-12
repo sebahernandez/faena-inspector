@@ -93,6 +93,7 @@ const draft = (): Inspection => ({
 const pgGateway = (onSubmit?: () => void): RemoteGateway => ({
   canSync: async () => true,
   uploadSignature: async () => `${USER}/${INSPECTION_ID}/declared.png`,
+  uploadPhoto: async (p) => `${USER}/${p.inspectionId}/${p.id}.jpg`,
   submitInspection: async (payload: SubmitPayload) => {
     onSubmit?.()
     await pg.query(`select submit_inspection($1::jsonb, $2::jsonb)`, [

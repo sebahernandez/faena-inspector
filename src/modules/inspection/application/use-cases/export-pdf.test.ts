@@ -3,12 +3,13 @@
  * from local data, not about PDF bytes. The layout is verified in the browser.
  */
 import { beforeEach, describe, expect, it } from 'vitest'
-import { CAMION_MULTIUSO_V1 } from '@/modules/template/infrastructure/template-seed'
+import { CAMION_MULTIUSO_V1, itemUuid } from '@/modules/template/infrastructure/template-seed'
 import type { Answer, Inspection } from '../../domain/inspection'
 import type {
-  DocumentSignatures,
+  DocumentImages,
   InspectionRepository,
   PdfExporter,
+  PhotoRepository,
   TemplateReader,
 } from '../ports'
 import type { InspectionDocument } from '../inspection-document'
@@ -41,16 +42,21 @@ const inspection: Inspection = {
 
 const signature = new Blob(['png'], { type: 'image/png' })
 
-let rendered: { document: InspectionDocument; signatures: DocumentSignatures } | null = null
+let rendered: { document: InspectionDocument; images: DocumentImages } | null = null
 let repository: InspectionRepository
 let templates: TemplateReader
 let pdf: PdfExporter
+let photos: PhotoRepository
+let photoRows: { id: string; inspectionId: string; itemId: string; byteSize: number; createdAt: string; storagePath: string | null }[]
+let photoImage: Blob | null
 
 const answers: Answer[] = []
 
 beforeEach(() => {
   rendered = null
   answers.length = 0
+  photoRows = []
+  photoImage = new Blob(['jpg'], { type: 'image/jpeg' })
 
   repository = {
     async create() {},
@@ -71,9 +77,18 @@ beforeEach(() => {
 
   templates = { find: async (id) => (id === CAMION_MULTIUSO_V1.id ? CAMION_MULTIUSO_V1 : null) }
 
+  photos = {
+    listForInspection: async () => photoRows,
+    imageOf: async () => photoImage,
+    add: async () => {},
+    listFor: async () => photoRows,
+    countFor: async () => photoRows.length,
+    remove: async () => {},
+  }
+
   pdf = {
-    async render(document, signatures) {
-      rendered = { document, signatures }
+    async render(document, images) {
+      rendered = { document, images }
       return new Blob(['%PDF-1.7'], { type: 'application/pdf' })
     },
   }
@@ -81,27 +96,27 @@ beforeEach(() => {
 
 describe('exportInspectionPdf', () => {
   it('returns a PDF blob and a meaningful file name', async () => {
-    const result = await exportInspectionPdf('insp-1', { repository, templates, pdf })
+    const result = await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
 
     expect(result.blob.type).toBe('application/pdf')
     expect(result.fileName).toBe('checklist-KRDM12-2026-03-01.pdf')
   })
 
   it('prints all 51 items even when nothing was answered', async () => {
-    await exportInspectionPdf('insp-1', { repository, templates, pdf })
+    await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
 
     expect(rendered!.document.sections.flatMap((s) => s.rows)).toHaveLength(51)
   })
 
   it('passes the declaring signature through to the renderer', async () => {
-    await exportInspectionPdf('insp-1', { repository, templates, pdf })
+    await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
 
-    expect(rendered!.signatures.declared).toBe(signature)
-    expect(rendered!.signatures.approved).toBeNull()
+    expect(rendered!.images.declared).toBe(signature)
+    expect(rendered!.images.approved).toBeNull()
   })
 
   it('carries the signatory block', async () => {
-    await exportInspectionPdf('insp-1', { repository, templates, pdf })
+    await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
 
     expect(rendered!.document.declaredBy).toEqual({
       name: 'J. Pérez',
@@ -112,14 +127,59 @@ describe('exportInspectionPdf', () => {
 
   it('fails clearly when the inspection is gone', async () => {
     await expect(
-      exportInspectionPdf('nope', { repository, templates, pdf }),
+      exportInspectionPdf('nope', { repository, templates, photos, pdf }),
     ).rejects.toBeInstanceOf(InspectionNotFoundError)
   })
 
   it('fails clearly when the frozen template is missing', async () => {
     const orphan: TemplateReader = { find: async () => null }
     await expect(
-      exportInspectionPdf('insp-1', { repository, templates: orphan, pdf }),
+      exportInspectionPdf('insp-1', { repository, templates: orphan, photos, pdf }),
     ).rejects.toBeInstanceOf(TemplateNotFoundError)
+  })
+})
+
+describe('evidence annex', () => {
+  it('carries no evidence when nothing was photographed', async () => {
+    await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
+    expect(rendered!.images.evidence).toEqual([])
+  })
+
+  it('labels each photo with the item it belongs to', async () => {
+    photoRows = [
+      {
+        id: 'p1',
+        inspectionId: 'insp-1',
+        itemId: itemUuid(1, 1),
+        byteSize: 1000,
+        createdAt: '2026-03-01T12:00:00.000Z',
+        storagePath: null,
+      },
+    ]
+
+    await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
+
+    expect(rendered!.images.evidence).toHaveLength(1)
+    expect(rendered!.images.evidence[0]).toMatchObject({
+      itemCode: '1.1',
+      itemLabel: 'Neumáticos del. y tras. en buen estado',
+    })
+  })
+
+  it('skips a photo whose bytes were already released after upload', async () => {
+    photoRows = [
+      {
+        id: 'p1',
+        inspectionId: 'insp-1',
+        itemId: itemUuid(1, 1),
+        byteSize: 1000,
+        createdAt: '2026-03-01T12:00:00.000Z',
+        storagePath: 'u/i/p1.jpg',
+      },
+    ]
+    photoImage = null
+
+    await exportInspectionPdf('insp-1', { repository, templates, photos, pdf })
+    expect(rendered!.images.evidence).toEqual([])
   })
 })

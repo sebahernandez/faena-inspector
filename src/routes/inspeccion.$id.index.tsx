@@ -1,9 +1,13 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useReducer } from 'react'
 import { z } from 'zod'
 import { useInspection } from '@/modules/inspection/ui/hooks/use-inspection'
 import { usePatchBuffer } from '@/modules/inspection/ui/hooks/use-patch-buffer'
 import { ItemRow } from '@/modules/inspection/ui/components/ItemRow'
 import { ProgressBar } from '@/modules/inspection/ui/components/ProgressBar'
+import { StorageWarning } from '@/modules/inspection/ui/components/StorageWarning'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { queries } from '@/app/container'
 
 /** Validated search params — this is what TanStack Router buys over React Router. */
 const searchSchema = z.object({ seccion: z.coerce.number().int().min(1).default(1) })
@@ -19,6 +23,13 @@ function Checklist() {
   const navigate = useNavigate()
   const { loading, inspection, template, answerByItem, progress, overall, answer, updateFinding } =
     useInspection(id)
+
+  // useLiveQuery re-runs on every photos write, so the thumbnails refresh
+  // themselves — `onPhotosChanged` exists only for the browsers where the
+  // observer misses a same-tick write.
+  const photos = useLiveQuery(() => queries.photosOfInspection(id), [id], [])
+  const [photoNonce, bumpPhotos] = useReducer((n: number) => n + 1, 0)
+  void photoNonce
 
   // A tap writes immediately — that is the data we cannot afford to lose.
   // Free text waits a beat, but patches MERGE per item so moving between
@@ -55,6 +66,8 @@ function Checklist() {
         <ProgressBar answered={overall.answered} total={overall.total} />
       </header>
 
+      <StorageWarning />
+
       {/* Section jump: the inspector walks around the truck, not down a list. */}
       <nav className="flex gap-2 overflow-x-auto pb-1">
         {progress.map((p, i) => (
@@ -82,9 +95,12 @@ function Checklist() {
           <ItemRow
             key={item.id}
             item={item}
+            inspectionId={id}
             answer={answerByItem.get(item.id)}
+            photos={photos.filter((p) => p.itemId === item.id)}
             onAnswer={(value) => void answer(item.id, value)}
             onFindingChange={(patch) => findings.push(item.id, patch)}
+            onPhotosChanged={bumpPhotos}
           />
         ))}
       </ul>

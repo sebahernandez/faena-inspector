@@ -1,4 +1,4 @@
-import type { DocumentSignatures, PdfExporter } from '../../application/ports'
+import type { DocumentImages, PdfExporter } from '../../application/ports'
 import type { InspectionDocument } from '../../application/inspection-document'
 
 /**
@@ -17,7 +17,7 @@ const toDataUrl = (blob: Blob | null): Promise<string | null> =>
 
 export function createReactPdfExporter(): PdfExporter {
   return {
-    async render(document: InspectionDocument, signatures: DocumentSignatures): Promise<Blob> {
+    async render(document: InspectionDocument, images: DocumentImages): Promise<Blob> {
       // Loaded on demand: the renderer is heavy and the checklist screens must
       // stay fast. The chunk is still precached, so this works offline.
       const [{ pdf }, { InspectionPdf }] = await Promise.all([
@@ -26,12 +26,23 @@ export function createReactPdfExporter(): PdfExporter {
       ])
 
       const [declared, approved] = await Promise.all([
-        toDataUrl(signatures.declared),
-        toDataUrl(signatures.approved),
+        toDataUrl(images.declared),
+        toDataUrl(images.approved),
       ])
 
+      const evidence = []
+      for (const item of images.evidence) {
+        const src = await toDataUrl(item.image)
+        if (src) evidence.push({ itemCode: item.itemCode, itemLabel: item.itemLabel, src })
+      }
+
       return pdf(
-        InspectionPdf({ document, declaredSignature: declared, approvedSignature: approved }),
+        InspectionPdf({
+          document,
+          declaredSignature: declared,
+          approvedSignature: approved,
+          evidence,
+        }),
       ).toBlob()
     },
   }

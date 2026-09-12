@@ -27,8 +27,18 @@ beforeEach(() => {
     countPending: async () => 0,
     countParked: async () => 0,
   }
-  remote = { canSync: async () => true, uploadSignature: async () => null, submitInspection: async () => {} }
-  source = { loadForUpload: async () => null, markSynced: async () => {} }
+  remote = {
+    canSync: async () => true,
+    uploadSignature: async () => null,
+    submitInspection: async () => {},
+    uploadPhoto: async () => 'evidence/x.jpg',
+  }
+  source = {
+    loadForUpload: async () => null,
+    markSynced: async () => {},
+    loadPhotoForUpload: async () => null,
+    markPhotoSynced: async () => {},
+  }
 })
 
 afterEach(() => {

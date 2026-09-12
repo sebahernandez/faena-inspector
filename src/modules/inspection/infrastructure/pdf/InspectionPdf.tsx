@@ -99,6 +99,12 @@ const s = StyleSheet.create({
   signImage: { height: 44, objectFit: 'contain' },
 
   footer: { marginTop: 8, fontSize: 6.5, color: '#555', textAlign: 'center' },
+
+  annexTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 6 },
+  annexGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  annexCard: { width: '48%', borderWidth: 0.5, borderColor: BORDER, padding: 4, marginBottom: 8 },
+  annexCaption: { fontFamily: 'Helvetica-Bold', marginBottom: 3 },
+  annexImage: { width: '100%', height: 190, objectFit: 'contain' },
 })
 
 // Column widths mirror the source spreadsheet's proportions.
@@ -127,13 +133,25 @@ const Mark = ({ value, expected }: { value: AnswerValue | null; expected: Answer
   <Text>{value === expected ? 'X' : ''}</Text>
 )
 
+export interface EvidenceEntry {
+  itemCode: string
+  itemLabel: string
+  src: string
+}
+
 interface Props {
   document: InspectionDocument
   declaredSignature: string | null
   approvedSignature: string | null
+  evidence?: EvidenceEntry[]
 }
 
-export function InspectionPdf({ document, declaredSignature, approvedSignature }: Props) {
+export function InspectionPdf({
+  document,
+  declaredSignature,
+  approvedSignature,
+  evidence = [],
+}: Props) {
   const { vehicle, tally } = document
 
   return (
@@ -259,6 +277,33 @@ export function InspectionPdf({ document, declaredSignature, approvedSignature }
           en terreno
         </Text>
       </Page>
+
+      {/*
+        Evidence lives on its own pages so the form above stays faithful to the
+        spreadsheet Prevención compares it against.
+      */}
+      {evidence.length > 0 && (
+        <Page size="A4" style={s.page}>
+          <Text style={s.annexTitle}>
+            ANEXO — EVIDENCIA FOTOGRÁFICA · {vehicle.plate} · {fmtDate(vehicle.inspectedAt)}
+          </Text>
+
+          <View style={s.annexGrid}>
+            {evidence.map((entry, index) => (
+              <View key={`${entry.itemCode}-${index}`} style={s.annexCard} wrap={false}>
+                <Text style={s.annexCaption}>
+                  {entry.itemCode} {entry.itemLabel}
+                </Text>
+                <Image src={entry.src} style={s.annexImage} />
+              </View>
+            ))}
+          </View>
+
+          <Text style={s.footer} fixed>
+            {document.title} · v{document.templateVersion} · {vehicle.plate} · Anexo fotográfico
+          </Text>
+        </Page>
+      )}
     </Document>
   )
 }

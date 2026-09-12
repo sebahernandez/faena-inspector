@@ -23,6 +23,12 @@ import { startInspection, type StartInspectionInput } from '@/modules/inspection
 import { answerItem, type AnswerItemInput } from '@/modules/inspection/application/use-cases/answer-item'
 import { updateHeader, type HeaderPatch } from '@/modules/inspection/application/use-cases/update-header'
 import { discardDraft } from '@/modules/inspection/application/use-cases/discard-draft'
+import {
+  attachEvidencePhoto,
+  removeEvidencePhoto,
+} from '@/modules/inspection/application/use-cases/attach-evidence'
+import { createDexiePhotoRepository } from '@/modules/inspection/infrastructure/dexie-photo.repository'
+import { createBrowserImageCompressor } from '@/modules/inspection/infrastructure/browser-image-compressor'
 import { submitInspection } from '@/modules/inspection/application/use-cases/submit-inspection'
 import { exportInspectionPdf } from '@/modules/inspection/application/use-cases/export-pdf'
 import { createReactPdfExporter } from '@/modules/inspection/infrastructure/pdf/react-pdf-exporter'
@@ -39,6 +45,8 @@ export const clock: Clock = { now: () => new Date() }
 export const ids: IdGenerator = { next: newId }
 export const inspections = createDexieInspectionRepository(db)
 export const pdf = createReactPdfExporter()
+export const photos = createDexiePhotoRepository(db)
+const compressor = createBrowserImageCompressor()
 
 /**
  * Sync is optional. With no Supabase project configured the gateway reports
@@ -79,6 +87,9 @@ export const queries = {
   answers: (id: string) => listAnswersOf(id, db),
   findings: (id: string) => listFindings(id, db),
   activeTemplate: () => getActiveTemplate(db),
+  photosOf: (inspectionId: string, itemId: string) => photos.listFor(inspectionId, itemId),
+  photosOfInspection: (inspectionId: string) => photos.listForInspection(inspectionId),
+  photoImage: (photoId: string) => photos.imageOf(photoId),
   template: (id: string) => getTemplate(id, db),
 }
 
@@ -90,12 +101,20 @@ export const actions = {
   updateHeader: (id: string, patch: HeaderPatch) =>
     updateHeader(id, patch, { repository: inspections, clock }),
   discardDraft: (id: string) => discardDraft(id, { repository: inspections }),
+  attachEvidence: (inspectionId: string, itemId: string, file: File | Blob) =>
+    attachEvidencePhoto(
+      { inspectionId, itemId, file },
+      { inspections, photos, compressor, clock, ids },
+    ),
+  removeEvidence: (photoId: string, inspectionId: string) =>
+    removeEvidencePhoto(photoId, inspectionId, { inspections, photos }),
   submitInspection: (inspectionId: string, signature: Blob, declaredBy: DeclaredBy, totalItems: number) =>
     submitInspection(
       { inspectionId, signature, declaredBy, totalItems },
       { repository: inspections, clock },
     ),
-  exportPdf: (id: string) => exportInspectionPdf(id, { repository: inspections, templates, pdf }),
+  exportPdf: (id: string) =>
+    exportInspectionPdf(id, { repository: inspections, templates, photos, pdf }),
 }
 
 export const bootstrap = async (): Promise<void> => {

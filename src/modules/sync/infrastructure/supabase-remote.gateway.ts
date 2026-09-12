@@ -2,7 +2,7 @@ import { supabase } from '@/modules/auth/infrastructure/supabase-client'
 import { db as defaultDb, type FaenaDB } from '@/shared/db/db'
 import { toBlob } from '@/modules/inspection/infrastructure/dexie-inspection.repository'
 import type { SubmitPayload } from '@/modules/inspection/application/submit-payload'
-import type { RemoteGateway } from '../application/ports'
+import type { PhotoUpload, RemoteGateway } from '../application/ports'
 
 /** Supabase returns errors instead of throwing; give them a shape retry.ts reads. */
 const fail = (
@@ -55,6 +55,36 @@ export function createSupabaseRemoteGateway(db: FaenaDB = defaultDb): RemoteGate
         })
 
       if (error) fail(error.message, { status: statusOf(error) })
+      return path
+    },
+
+    /**
+     * Storage first, then the row — and the row only through the RPC, because
+     * answer_photos has no INSERT policy. Re-uploading to the same path
+     * overwrites, so a retry leaves no orphan.
+     */
+    async uploadPhoto(photo: PhotoUpload) {
+      const client = supabase
+      if (!client) return fail('not authenticated')
+
+      const { data: auth } = await client.auth.getUser()
+      const user = auth.user
+      if (!user) return fail('not authenticated', { status: 401 })
+
+      const path = `${user.id}/${photo.inspectionId}/${photo.id}.jpg`
+      const { error: uploadError } = await client.storage
+        .from('evidence')
+        .upload(path, photo.image, { contentType: 'image/jpeg', upsert: true })
+      if (uploadError) fail(uploadError.message, { status: statusOf(uploadError) })
+
+      const { error } = await client.rpc('record_photo', {
+        p_id: photo.id,
+        p_inspection_id: photo.inspectionId,
+        p_item_id: photo.itemId,
+        p_storage_path: path,
+      })
+      if (error) fail(error.message, { code: error.code })
+
       return path
     },
 

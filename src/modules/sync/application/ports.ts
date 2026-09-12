@@ -20,18 +20,29 @@ export interface OutboxRepository {
   countParked(): Promise<number>
 }
 
+export interface PhotoUpload {
+  id: string
+  inspectionId: string
+  itemId: string
+  image: Blob
+}
+
 export interface RemoteGateway {
   /** True only when a project is configured AND somebody is signed in. */
   canSync(): Promise<boolean>
   /** Uploads the signature and returns its storage path, or null if none. */
   uploadSignature(inspectionId: string): Promise<string | null>
   submitInspection(payload: SubmitPayload): Promise<void>
+  /** Uploads the image and records the row. Returns the storage path. */
+  uploadPhoto(photo: PhotoUpload): Promise<string>
 }
 
 export interface SyncSourceRepository {
   /** Everything needed to build the payload, or null if the row is gone. */
   loadForUpload(inspectionId: string): Promise<SubmitPayload | null>
   markSynced(inspectionId: string): Promise<void>
+  loadPhotoForUpload(photoId: string): Promise<PhotoUpload | null>
+  markPhotoSynced(photoId: string, storagePath: string): Promise<void>
 }
 
 export interface Clock {

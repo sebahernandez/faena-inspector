@@ -80,11 +80,14 @@ beforeEach(() => {
   remote = {
     canSync: async () => true,
     uploadSignature: async () => 'signatures/a/declared.png',
+    uploadPhoto: async (p) => `evidence/${p.id}.jpg`,
     submitInspection: async (p) => {
       submitted.push(p.inspection.id)
     },
   }
   source = {
+    loadPhotoForUpload: async () => null,
+    markPhotoSynced: async () => {},
     loadForUpload: async (id) => payload(id),
     markSynced: async (id) => {
       synced.push(id)

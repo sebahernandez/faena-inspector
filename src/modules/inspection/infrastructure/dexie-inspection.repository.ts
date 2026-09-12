@@ -55,7 +55,7 @@ export function createDexieInspectionRepository(db: FaenaDB = defaultDb): Inspec
       // other than Dexie inside a transaction drops out of its scope.
       const storedSignature = await toStoredBytes(signature)
 
-      await db.transaction('rw', db.inspections, db.outbox, async () => {
+      await db.transaction('rw', db.inspections, db.outbox, db.photos, async () => {
         const current = await db.inspections.get(id)
         if (!current) throw new Error(`Inspection ${id} not found`)
         if (current.status !== 'draft') throw new Error('Only drafts can be submitted')
@@ -79,6 +79,23 @@ export function createDexieInspectionRepository(db: FaenaDB = defaultDb): Inspec
           lastError: null,
           createdAt: now,
         })
+
+        // Photos queue here, not when they are taken. `seq` auto-increments,
+        // so the inspection always leaves first — a photo row references it by
+        // foreign key and would be rejected on its own.
+        const pending = await db.photos.where('inspectionId').equals(id).toArray()
+        for (const photo of pending) {
+          if (photo.uploadState !== 'pending') continue
+          await db.outbox.put({
+            dedupeKey: `photo:${photo.id}`,
+            kind: 'photo',
+            entityId: photo.id,
+            attempts: 0,
+            nextAttemptAt: now,
+            lastError: null,
+            createdAt: now,
+          })
+        }
       })
     },
 

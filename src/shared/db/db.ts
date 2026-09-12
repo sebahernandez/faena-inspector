@@ -31,7 +31,9 @@ export interface StoredPhoto {
   id: string
   inspectionId: string
   itemId: string
-  image: StoredBytes
+  /** Null once uploaded: the bytes live in Storage and the quota is freed. */
+  image: StoredBytes | null
+  byteSize: number
   uploadState: 'pending' | 'uploaded'
   storagePath: string | null
   createdAt: string

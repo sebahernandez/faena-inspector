@@ -42,6 +42,9 @@ beforeAll(async () => {
   db = await PGlite.create()
   await db.exec(AUTH_SHIM)
   await db.exec(MIGRATION)
+  await db.exec(
+    readFileSync(join(process.cwd(), 'supabase/migrations/20260912010000_evidence_photos.sql'), 'utf8'),
+  )
 
   await db.exec(`
     insert into auth.users (id, email) values
@@ -115,6 +118,7 @@ beforeEach(async () => {
   // never uses.
   await db.exec(`
     set session_replication_role = replica;
+    delete from answer_photos;
     delete from answers;
     delete from inspections;
     set session_replication_role = origin;
@@ -367,5 +371,58 @@ describe('approval — server-owned, supervisor only', () => {
       'select plate, declared_by_name from inspections',
     )
     expect(r.rows[0]).toMatchObject({ plate: 'KRDM12', declared_by_name: 'Juan Pérez' })
+  })
+})
+
+describe('evidence photos', () => {
+  const PHOTO = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+
+  beforeEach(async () => {
+    await actAs(INSPECTOR)
+    await submit()
+  })
+
+  it('records a photo for an inspection in my organisation', async () => {
+    await db.query(`select record_photo($1::uuid,$2::uuid,$3::uuid,$4)`, [
+      PHOTO, INSPECTION_ID, itemIds[0], 'u/i/p.jpg',
+    ])
+    const r = await db.query<{ storage_path: string }>('select storage_path from answer_photos')
+    expect(r.rows[0]?.storage_path).toBe('u/i/p.jpg')
+  })
+
+  it('is idempotent on retry', async () => {
+    for (let i = 0; i < 3; i++) {
+      await db.query(`select record_photo($1::uuid,$2::uuid,$3::uuid,$4)`, [
+        PHOTO, INSPECTION_ID, itemIds[0], 'u/i/p.jpg',
+      ])
+    }
+    expect((await db.query('select 1 from answer_photos')).rows).toHaveLength(1)
+  })
+
+  it('refuses to staple evidence onto another organisation document', async () => {
+    await actAs(OUTSIDER)
+    await expect(
+      db.query(`select record_photo($1::uuid,$2::uuid,$3::uuid,$4)`, [
+        PHOTO, INSPECTION_ID, itemIds[0], 'u/i/p.jpg',
+      ]),
+    ).rejects.toThrow(/not found in your organisation/)
+  })
+
+  it('refuses an anonymous caller', async () => {
+    await actAs(null)
+    await expect(
+      db.query(`select record_photo($1::uuid,$2::uuid,$3::uuid,$4)`, [
+        PHOTO, INSPECTION_ID, itemIds[0], 'u/i/p.jpg',
+      ]),
+    ).rejects.toThrow(/not authenticated/)
+  })
+
+  it('cannot be altered or removed once recorded', async () => {
+    await db.query(`select record_photo($1::uuid,$2::uuid,$3::uuid,$4)`, [
+      PHOTO, INSPECTION_ID, itemIds[0], 'u/i/p.jpg',
+    ])
+    await asOwner()
+    await expect(db.exec(`update answer_photos set storage_path = 'x'`)).rejects.toThrow(/immutable/)
+    await expect(db.exec(`delete from answer_photos`)).rejects.toThrow(/immutable/)
   })
 })

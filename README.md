@@ -170,6 +170,29 @@ diseño asume eso en vez de fingir lo contrario.
 reales: Dexie sobre fake-indexeddb y el servidor sobre PGlite ejecutando la
 migración de verdad. Una columna renombrada falla ahí, no en un camión.
 
+## Fotos de evidencia
+
+Solo se adjuntan a un `NO`. Una foto de algo que cumple es cuota gastada al
+pedo, en el dispositivo donde quedarse sin cuota significa que **el navegador
+borra inspecciones firmadas**. Por eso los límites son parte del dominio, no
+un detalle de la interfaz:
+
+- Máximo 3 por ítem.
+- Se comprimen **antes** de guardarse, nunca después: el original jamás entra a
+  la base. Verificado: 1055 KB → 181 KB, y 3000×2000 → 1600×1066.
+- Se descarta el EXIF, que de paso elimina las coordenadas GPS que el teléfono
+  estampa en cada foto. Nadie pidió el historial de ubicaciones de la cuadrilla.
+- Los bytes se liberan al subirse: quedan en Storage.
+- Hay un aviso de presión de almacenamiento **antes** de que el navegador
+  empiece a borrar, no después.
+
+En la cola, las fotos se encolan al **firmar**, no al tomarse. `seq`
+autoincrementa, así que la inspección sale primero — una foto referencia la
+inspección por clave foránea y sola sería rechazada.
+
+Y aparecen en el PDF, en páginas de anexo aparte para que el formulario de
+arriba siga siendo fiel a la planilla que Prevención compara.
+
 ## Sin backend también funciona
 
 Sin `VITE_SUPABASE_URL` la app arranca igual: se inspecciona, se firma y se
@@ -184,7 +207,7 @@ estado roto.
 - [x] Fase 3 — firma en canvas + PDF fiel al Excel, generado sin red
 - [x] Fase 4 — Supabase: esquema, RLS, aprobación, seed y auth
 - [x] Fase 5 — cola de salida y worker de sincronización
-- [ ] Fase 6 — fotos de evidencia
+- [x] Fase 6 — fotos de evidencia con anexo en el PDF
 - [ ] Fase 7 — aprobación del supervisor
 - [ ] Fase 8 — panel de hallazgos
 
