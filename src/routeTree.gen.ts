@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InspeccionNuevaRouteImport } from './routes/inspeccion.nueva'
 import { Route as InspeccionIdIndexRouteImport } from './routes/inspeccion.$id.index'
+import { Route as InspeccionIdDocumentoRouteImport } from './routes/inspeccion.$id.documento'
+import { Route as InspeccionIdFirmaRouteImport } from './routes/inspeccion.$id.firma'
 import { Route as InspeccionIdResumenRouteImport } from './routes/inspeccion.$id.resumen'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +31,16 @@ const InspeccionIdIndexRoute = InspeccionIdIndexRouteImport.update({
   path: '/inspeccion/$id/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InspeccionIdDocumentoRoute = InspeccionIdDocumentoRouteImport.update({
+  id: '/inspeccion/$id/documento',
+  path: '/inspeccion/$id/documento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InspeccionIdFirmaRoute = InspeccionIdFirmaRouteImport.update({
+  id: '/inspeccion/$id/firma',
+  path: '/inspeccion/$id/firma',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InspeccionIdResumenRoute = InspeccionIdResumenRouteImport.update({
   id: '/inspeccion/$id/resumen',
   path: '/inspeccion/$id/resumen',
@@ -38,12 +50,16 @@ const InspeccionIdResumenRoute = InspeccionIdResumenRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
+  '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
+  '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
   '/inspeccion/$id/resumen': typeof InspeccionIdResumenRoute
   '/inspeccion/$id/': typeof InspeccionIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
+  '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
+  '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
   '/inspeccion/$id/resumen': typeof InspeccionIdResumenRoute
   '/inspeccion/$id': typeof InspeccionIdIndexRoute
 }
@@ -51,19 +67,34 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
+  '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
+  '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
   '/inspeccion/$id/resumen': typeof InspeccionIdResumenRoute
   '/inspeccion/$id/': typeof InspeccionIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/inspeccion/nueva' | '/inspeccion/$id/resumen' | '/inspeccion/$id/'
+    | '/'
+    | '/inspeccion/nueva'
+    | '/inspeccion/$id/documento'
+    | '/inspeccion/$id/firma'
+    | '/inspeccion/$id/resumen'
+    | '/inspeccion/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inspeccion/nueva' | '/inspeccion/$id/resumen' | '/inspeccion/$id'
+  to:
+    | '/'
+    | '/inspeccion/nueva'
+    | '/inspeccion/$id/documento'
+    | '/inspeccion/$id/firma'
+    | '/inspeccion/$id/resumen'
+    | '/inspeccion/$id'
   id:
     | '__root__'
     | '/'
     | '/inspeccion/nueva'
+    | '/inspeccion/$id/documento'
+    | '/inspeccion/$id/firma'
     | '/inspeccion/$id/resumen'
     | '/inspeccion/$id/'
   fileRoutesById: FileRoutesById
@@ -71,6 +102,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InspeccionNuevaRoute: typeof InspeccionNuevaRoute
+  InspeccionIdDocumentoRoute: typeof InspeccionIdDocumentoRoute
+  InspeccionIdFirmaRoute: typeof InspeccionIdFirmaRoute
   InspeccionIdResumenRoute: typeof InspeccionIdResumenRoute
   InspeccionIdIndexRoute: typeof InspeccionIdIndexRoute
 }
@@ -98,6 +131,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InspeccionIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inspeccion/$id/documento': {
+      id: '/inspeccion/$id/documento'
+      path: '/inspeccion/$id/documento'
+      fullPath: '/inspeccion/$id/documento'
+      preLoaderRoute: typeof InspeccionIdDocumentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inspeccion/$id/firma': {
+      id: '/inspeccion/$id/firma'
+      path: '/inspeccion/$id/firma'
+      fullPath: '/inspeccion/$id/firma'
+      preLoaderRoute: typeof InspeccionIdFirmaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inspeccion/$id/resumen': {
       id: '/inspeccion/$id/resumen'
       path: '/inspeccion/$id/resumen'
@@ -111,6 +158,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InspeccionNuevaRoute: InspeccionNuevaRoute,
+  InspeccionIdDocumentoRoute: InspeccionIdDocumentoRoute,
+  InspeccionIdFirmaRoute: InspeccionIdFirmaRoute,
   InspeccionIdResumenRoute: InspeccionIdResumenRoute,
   InspeccionIdIndexRoute: InspeccionIdIndexRoute,
 }

@@ -109,6 +109,20 @@ function Summary() {
         />
       </label>
 
+      <Link
+        to="/inspeccion/$id/firma"
+        params={{ id }}
+        onClick={(e) => {
+          if (!complete) e.preventDefault()
+        }}
+        aria-disabled={!complete}
+        className={`flex min-h-12 items-center justify-center rounded-lg font-semibold text-white ${
+          complete ? 'bg-slate-900' : 'pointer-events-none bg-slate-300'
+        }`}
+      >
+        Firmar y cerrar
+      </Link>
+
       <div className="flex gap-3">
         <Link
           to="/inspeccion/$id"
@@ -126,8 +140,6 @@ function Summary() {
           Descartar
         </button>
       </div>
-
-      <p className="text-center text-sm text-slate-400">Firma y PDF — fase 3.</p>
     </section>
   )
 }

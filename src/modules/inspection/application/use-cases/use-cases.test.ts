@@ -34,9 +34,14 @@ class FakeRepository implements InspectionRepository {
   async listAnswers(inspectionId: string) {
     return [...this.answers.values()].filter((a) => a.inspectionId === inspectionId)
   }
-  async submit(id: string, _signature: Blob, declaredBy: DeclaredBy) {
+  signatures = new Map<string, Blob>()
+  async submit(id: string, signature: Blob, declaredBy: DeclaredBy) {
     this.submitted.push({ id, declaredBy })
+    this.signatures.set(id, signature)
     await this.update(id, { status: 'submitted', syncState: 'queued' })
+  }
+  async findSignature(id: string) {
+    return this.signatures.get(id) ?? null
   }
   async discard(id: string) {
     this.inspections.delete(id)

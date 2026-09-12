@@ -88,12 +88,27 @@ Zustand: duplicarían la verdad en dos lugares.
   fusiona por ítem y descarga el buffer al desmontar y al bloquear la pantalla.
   Encontrado manejando la UI real, no en los tests.
 
+## El PDF
+
+`docs/muestra-checklist.pdf` es una salida real de la app, generada **sin
+conexión**. Es lo que hay que mostrarle a Prevención antes de construir la
+fase 4: si el formato no les sirve, todo lo demás da igual.
+
+Dos decisiones del renderizador que no son cosméticas:
+
+- **Solo fuentes integradas (Helvetica).** Registrar una fuente web haría que
+  el PDF necesitara red, y todo el punto es producirlo en terreno.
+- **Sin guionado.** Las reglas por defecto de react-pdf son inglesas y en
+  español producen "instal-adas", "op-erativa", "es-tado". En un documento que
+  Prevención compara contra el formulario en papel, eso se lee como una copia
+  descuidada.
+
 ## Estado
 
 - [x] Fase 0 — proyecto, PWA, regla de arquitectura verificada
 - [x] Fase 1 — dominio, base local, seed de 51 ítems
 - [x] Fase 2 — captura completa offline, borrador reanudable
-- [ ] Fase 3 — firma + PDF
+- [x] Fase 3 — firma en canvas + PDF fiel al Excel, generado sin red
 - [ ] Fase 4 — Supabase (esquema, RLS, auth)
 - [ ] Fase 5 — cola de sincronización
 - [ ] Fase 6 — fotos de evidencia

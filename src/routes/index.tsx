@@ -9,6 +9,7 @@ export const Route = createFileRoute('/')({ component: Home })
 function Home() {
   // The local database IS the state. These update on their own on every write.
   const drafts = useLiveQuery(queries.drafts, [], [])
+  const signed = useLiveQuery(queries.submitted, [], [])
   const pending = useLiveQuery(queries.pendingUpload, [], [])
   const template = useLiveQuery(queries.activeTemplate, [], null)
 
@@ -66,6 +67,40 @@ function Home() {
             </li>
           ))}
         </ul>
+      )}
+
+      {signed.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-base font-semibold">Firmadas</h2>
+          <ul className="space-y-2">
+            {signed.map((item) => (
+              <li key={item.id}>
+                <Link
+                  to="/inspeccion/$id/documento"
+                  params={{ id: item.id }}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4"
+                >
+                  <span>
+                    <span className="block font-semibold">{item.plate}</span>
+                    <span className="block text-sm text-slate-500">
+                      {item.declaredByName ?? '—'} ·{' '}
+                      {format(new Date(item.inspectedAt), 'dd/MM/yyyy HH:mm')}
+                    </span>
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      item.syncState === 'synced'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {item.syncState === 'synced' ? 'Enviada' : 'Por enviar'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   )

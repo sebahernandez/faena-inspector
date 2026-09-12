@@ -82,6 +82,11 @@ export function createDexieInspectionRepository(db: FaenaDB = defaultDb): Inspec
       })
     },
 
+    async findSignature(id: string) {
+      const row = await db.inspections.get(id)
+      return row?.declaredSignature ? toBlob(row.declaredSignature) : null
+    },
+
     /** A draft and its answers disappear together, or not at all. */
     async discard(id: string) {
       await db.transaction('rw', db.inspections, db.answers, async () => {

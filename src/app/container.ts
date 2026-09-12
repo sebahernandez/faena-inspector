@@ -23,17 +23,27 @@ import { startInspection, type StartInspectionInput } from '@/modules/inspection
 import { answerItem, type AnswerItemInput } from '@/modules/inspection/application/use-cases/answer-item'
 import { updateHeader, type HeaderPatch } from '@/modules/inspection/application/use-cases/update-header'
 import { discardDraft } from '@/modules/inspection/application/use-cases/discard-draft'
+import { submitInspection } from '@/modules/inspection/application/use-cases/submit-inspection'
+import { exportInspectionPdf } from '@/modules/inspection/application/use-cases/export-pdf'
+import { createReactPdfExporter } from '@/modules/inspection/infrastructure/pdf/react-pdf-exporter'
+import type { DeclaredBy, TemplateReader } from '@/modules/inspection/application/ports'
 import { db } from '@/shared/db/db'
 import { newId } from '@/shared/lib/id'
 
 export const clock: Clock = { now: () => new Date() }
 export const ids: IdGenerator = { next: newId }
 export const inspections = createDexieInspectionRepository(db)
+export const pdf = createReactPdfExporter()
+
+const templates: TemplateReader = {
+  find: async (id) => (await getTemplate(id, db)) ?? null,
+}
 
 /** Read-only live queries the UI subscribes to through useLiveQuery. */
 export const queries = {
   draftCount: () => db.inspections.where('status').equals('draft').count(),
   drafts: () => listDrafts(db),
+  submitted: () => db.inspections.where('status').anyOf('submitted', 'approved').reverse().sortBy('inspectedAt'),
   pendingUpload: () => listPendingUpload(db),
   inspection: (id: string) => findInspection(id, db),
   answers: (id: string) => listAnswersOf(id, db),
@@ -50,6 +60,12 @@ export const actions = {
   updateHeader: (id: string, patch: HeaderPatch) =>
     updateHeader(id, patch, { repository: inspections, clock }),
   discardDraft: (id: string) => discardDraft(id, { repository: inspections }),
+  submitInspection: (inspectionId: string, signature: Blob, declaredBy: DeclaredBy, totalItems: number) =>
+    submitInspection(
+      { inspectionId, signature, declaredBy, totalItems },
+      { repository: inspections, clock },
+    ),
+  exportPdf: (id: string) => exportInspectionPdf(id, { repository: inspections, templates, pdf }),
 }
 
 export const bootstrap = async (): Promise<void> => {
