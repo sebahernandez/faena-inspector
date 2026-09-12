@@ -10,15 +10,23 @@
  * allowed to replace a paper form.
  */
 import { PGlite } from '@electric-sql/pglite'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
-const MIGRATION = readFileSync(
-  join(process.cwd(), 'supabase/migrations/20260912000000_initial_schema.sql'),
-  'utf8',
-)
 const AUTH_SHIM = readFileSync(join(process.cwd(), 'src/test/supabase-auth-shim.sql'), 'utf8')
+
+/**
+ * Every migration, in order — not a hand-listed subset.
+ *
+ * A list would drift: a migration applied to the real project but forgotten
+ * here means the suite tests a schema that no longer exists. Reading the
+ * directory makes that impossible.
+ */
+const MIGRATIONS = readdirSync(join(process.cwd(), 'supabase/migrations'))
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
+  .map((f) => ({ file: f, sql: readFileSync(join(process.cwd(), 'supabase/migrations', f), 'utf8') }))
 
 const ORG_A = '11111111-1111-4111-8111-111111111111'
 const ORG_B = '22222222-2222-4222-8222-222222222222'
@@ -41,16 +49,13 @@ const asOwner = () => db.exec('reset role;')
 beforeAll(async () => {
   db = await PGlite.create()
   await db.exec(AUTH_SHIM)
-  await db.exec(MIGRATION)
-  await db.exec(
-    readFileSync(join(process.cwd(), 'supabase/migrations/20260912010000_evidence_photos.sql'), 'utf8'),
-  )
-  await db.exec(
-    readFileSync(join(process.cwd(), 'supabase/migrations/20260912020000_panel_views.sql'), 'utf8'),
-  )
-  await db.exec(
-    readFileSync(join(process.cwd(), 'supabase/migrations/20260912030000_separation_of_duties.sql'), 'utf8'),
-  )
+  for (const migration of MIGRATIONS) {
+    try {
+      await db.exec(migration.sql)
+    } catch (error) {
+      throw new Error(`migration ${migration.file} failed: ${(error as Error).message}`)
+    }
+  }
 
   await db.exec(`
     insert into auth.users (id, email) values
@@ -530,5 +535,69 @@ describe('separation of duties', () => {
     await db.query(`select approve_inspection($1::uuid, null)`, [INSPECTION_ID])
     const r = await db.query<{ status: string }>('select status from inspections')
     expect(r.rows[0]?.status).toBe('approved')
+  })
+})
+
+describe('migrations', () => {
+  it('applies every file in supabase/migrations, in order', () => {
+    // If this drops below the real count, a migration was added without being
+    // covered here — exactly the drift that bit us between fase 4 and 7.
+    expect(MIGRATIONS.length).toBeGreaterThanOrEqual(7)
+    expect(MIGRATIONS.map((m) => m.file)).toEqual([...MIGRATIONS.map((m) => m.file)].sort())
+  })
+
+  it('leaves the internal helpers out of the exposed schema', async () => {
+    await asOwner()
+    const exposed = await db.query<{ n: number }>(`
+      select count(*)::int as n from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname in ('current_org','current_role_name','storage_path_org')
+    `)
+    expect(exposed.rows[0]?.n).toBe(0)
+
+    const priv = await db.query<{ n: number }>(`
+      select count(*)::int as n from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'private'
+        and p.proname in ('current_org','current_role_name','storage_path_org')
+    `)
+    expect(priv.rows[0]?.n).toBe(3)
+  })
+
+  it('does not let anon execute the write RPCs', async () => {
+    await asOwner()
+    const r = await db.query<{ fn: string; anon_can: boolean }>(`
+      select p.proname as fn,
+             has_function_privilege('anon', p.oid, 'EXECUTE') as anon_can
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname in ('submit_inspection','approve_inspection','record_photo')
+    `)
+    expect(r.rows).toHaveLength(3)
+    for (const row of r.rows) expect(row.anon_can, `${row.fn} reachable by anon`).toBe(false)
+  })
+
+  it('still lets authenticated execute them', async () => {
+    await asOwner()
+    const r = await db.query<{ fn: string; can: boolean }>(`
+      select p.proname as fn,
+             has_function_privilege('authenticated', p.oid, 'EXECUTE') as can
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname in ('submit_inspection','approve_inspection','record_photo')
+    `)
+    for (const row of r.rows) expect(row.can, `${row.fn} unreachable`).toBe(true)
+  })
+
+  it('creates both private storage buckets', async () => {
+    await asOwner()
+    const r = await db.query<{ id: string; public: boolean }>(
+      `select id, public from storage.buckets order by id`,
+    )
+    expect(r.rows.map((b) => b.id)).toEqual(['evidence', 'signatures'])
+    expect(r.rows.every((b) => b.public === false)).toBe(true)
   })
 })

@@ -4,13 +4,13 @@
 -- Source: src/modules/template/infrastructure/template-seed.ts
 -- 5 sections, 51 items.
 --
--- Set :org_id before running, e.g.
+-- Set 'a0000000-0000-4000-8000-00000000000a' before running, e.g.
 --   psql -v org_id="'<uuid>'" -f supabase/seed.sql
 
 begin;
 
 insert into templates (id, org_id, name, version, effective_from, published)
-values ('00000000-0000-4000-8000-000000000001', :org_id,
+values ('00000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-00000000000a',
         'Lista de Chequeo Camión Multiuso', 1, '2026-01-01', true)
 on conflict (org_id, name, version) do nothing;
 

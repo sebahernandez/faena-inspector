@@ -193,6 +193,25 @@ inspección por clave foránea y sola sería rechazada.
 Y aparecen en el PDF, en páginas de anexo aparte para que el formulario de
 arriba siga siendo fiel a la planilla que Prevención compara.
 
+## Verificado contra Supabase real
+
+El proyecto está desplegado y el ciclo completo se probó de punta a punta:
+login, captura, firma, subida a Storage, y aprobación por un supervisor
+distinto del autor. Las siete reglas de inmutabilidad y las seis de aprobación
+se ejecutaron contra la base de verdad, no solo contra PGlite.
+
+**Lo que PGlite no podía cachar:** el auditor de seguridad de Supabase encontró
+que `anon` podía ejecutar todas las funciones RPC. Postgres otorga `EXECUTE` a
+`PUBLIC` en cada función nueva, y nuestro `grant ... to authenticated` se sumó
+encima en vez de reemplazarlo. PGlite no tiene rol `anon`, así que la suite
+local nunca lo iba a ver. Corregido en `20260912050000`, y los helpers internos
+se movieron fuera del esquema expuesto en `20260912060000`.
+
+Los tests ahora aplican **todos** los archivos de `supabase/migrations` leyendo
+el directorio, no una lista escrita a mano: una lista se desactualiza, y una
+migración aplicada al servidor pero olvidada en la suite significa testear un
+esquema que ya no existe.
+
 ## El panel del supervisor
 
 `/panel` es la mitad **con conexión** de la línea que se trazó el día uno. Acá
