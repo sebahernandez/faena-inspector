@@ -129,6 +129,7 @@ beforeEach(async () => {
   // never uses.
   await db.exec(`
     set session_replication_role = replica;
+    delete from finding_closures;
     delete from answer_photos;
     delete from answers;
     delete from inspections;
@@ -599,5 +600,133 @@ describe('migrations', () => {
     )
     expect(r.rows.map((b) => b.id)).toEqual(['evidence', 'signatures'])
     expect(r.rows.every((b) => b.public === false)).toBe(true)
+  })
+})
+
+describe('closing a finding', () => {
+  beforeEach(async () => {
+    await actAs(INSPECTOR)
+    await submit()
+  })
+
+  const close = (uid: string, note = 'Neumático reemplazado el 20/10') =>
+    db.query(`select close_finding($1::uuid, $2::uuid, $3, $4)`, [
+      INSPECTION_ID,
+      itemIds[0],
+      note,
+      null,
+    ]).then((r) => {
+      void uid
+      return r
+    })
+
+  it('lets a supervisor close it', async () => {
+    await actAs(SUPERVISOR)
+    await close(SUPERVISOR)
+
+    const r = await db.query<{ closed: boolean; closed_by_name: string; closure_note: string }>(
+      'select closed, closed_by_name, closure_note from fleet_findings',
+    )
+    expect(r.rows[0]).toMatchObject({
+      closed: true,
+      closed_by_name: 'Ana Soto',
+      closure_note: 'Neumático reemplazado el 20/10',
+    })
+  })
+
+  it('refuses an inspector', async () => {
+    await actAs(INSPECTOR)
+    await expect(close(INSPECTOR)).rejects.toThrow(/only a supervisor can close/)
+  })
+
+  it('refuses another organisation', async () => {
+    await asOwner()
+    await db.exec(`update profiles set role = 'supervisor' where id = '${OUTSIDER}'`)
+    await actAs(OUTSIDER)
+    await expect(close(OUTSIDER)).rejects.toThrow(/not found in your organisation/)
+    await asOwner()
+    await db.exec(`update profiles set role = 'inspector' where id = '${OUTSIDER}'`)
+  })
+
+  it('refuses an empty note — a closure with no explanation is not a record', async () => {
+    await actAs(SUPERVISOR)
+    await expect(close(SUPERVISOR, '  ')).rejects.toThrow()
+  })
+
+  it('is idempotent on retry', async () => {
+    await actAs(SUPERVISOR)
+    await close(SUPERVISOR)
+    await close(SUPERVISOR, 'otra nota')
+
+    const r = await db.query<{ n: number; closure_note: string }>(
+      'select count(*)::int as n, min(note) as closure_note from finding_closures',
+    )
+    expect(r.rows[0]?.n).toBe(1)
+    expect(r.rows[0]?.closure_note).toBe('Neumático reemplazado el 20/10')
+  })
+
+  it('never touches the inspection it belongs to', async () => {
+    await actAs(SUPERVISOR)
+    await close(SUPERVISOR)
+
+    const r = await db.query<{ status: string; updated_at: string; value: string }>(`
+      select i.status::text, i.updated_at::text,
+             (select a.value::text from answers a where a.item_id = '${itemIds[0]}') as value
+        from inspections i
+    `)
+    // Still submitted, and the NO is still a NO. The document is untouched.
+    expect(r.rows[0]?.status).toBe('submitted')
+    expect(r.rows[0]?.value).toBe('NO')
+  })
+
+  it('cannot be edited or reopened afterwards', async () => {
+    await actAs(SUPERVISOR)
+    await close(SUPERVISOR)
+
+    await asOwner()
+    await expect(db.exec(`update finding_closures set note = 'editado'`)).rejects.toThrow(
+      /cannot be edited or reopened/,
+    )
+    await expect(db.exec(`delete from finding_closures`)).rejects.toThrow(
+      /cannot be edited or reopened/,
+    )
+  })
+
+  it('stops counting as overdue once closed', async () => {
+    await asOwner()
+    await db.exec(`
+      set session_replication_role = replica;
+      update answers set due_date = current_date - 10 where value = 'NO';
+      set session_replication_role = origin;
+    `)
+
+    await actAs(SUPERVISOR)
+    const before = await db.query<{ overdue: boolean }>('select overdue from fleet_findings')
+    expect(before.rows[0]?.overdue).toBe(true)
+
+    await close(SUPERVISOR)
+    const after = await db.query<{ overdue: boolean; closed: boolean }>(
+      'select overdue, closed from fleet_findings',
+    )
+    expect(after.rows[0]).toMatchObject({ overdue: false, closed: true })
+  })
+
+  it('does not leak fleet findings across organisations', async () => {
+    await actAs(OUTSIDER)
+    expect((await db.query('select 1 from fleet_findings')).rows).toHaveLength(0)
+    expect((await db.query('select 1 from finding_closures')).rows).toHaveLength(0)
+  })
+
+  it('carries the plate and the item label so the list needs no extra joins', async () => {
+    await actAs(SUPERVISOR)
+    const r = await db.query<{ plate: string; item_code: string; item_label: string; responsible: string }>(
+      'select plate, item_code, item_label, responsible from fleet_findings',
+    )
+    expect(r.rows[0]).toMatchObject({
+      plate: 'KRDM12',
+      item_code: '1.1',
+      item_label: 'Neumáticos del. y tras. en buen estado',
+      responsible: 'M. Rojas',
+    })
   })
 })

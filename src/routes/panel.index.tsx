@@ -30,6 +30,13 @@ function Panel() {
         <span className="text-sm text-slate-500">{session.fullName}</span>
       </header>
 
+      <Link
+        to="/panel/hallazgos"
+        className="flex min-h-12 items-center justify-center rounded-lg border border-slate-300 bg-white font-medium"
+      >
+        Ver hallazgos de la flota →
+      </Link>
+
       <div className="flex gap-2">
         {(['pending', 'approved', 'all'] as const).map((f) => (
           <button

@@ -1,8 +1,10 @@
 import { supabase } from '@/modules/auth/infrastructure/supabase-client'
 import {
+  toFleetFinding,
   toReviewAnswer,
   toSummary,
   type AnswerRow,
+  type FleetFindingRow,
   type SummaryRow,
 } from '../application/row-mapping'
 import { SupervisionUnavailableError, type SupervisionGateway } from '../application/ports'
@@ -75,6 +77,31 @@ export function createSupabaseSupervisionGateway(): SupervisionGateway {
         answers: (answers ?? []).map(toReviewAnswer),
         photos: signed.filter((p) => p.url !== ''),
       }
+    },
+
+    async listFindings(filter) {
+      let query = client()
+        .from('fleet_findings')
+        .select('*')
+        .order('due_date', { ascending: true, nullsFirst: false })
+
+      if (filter === 'open') query = query.eq('closed', false)
+      if (filter === 'closed') query = query.eq('closed', true)
+      if (filter === 'overdue') query = query.eq('overdue', true)
+
+      const { data, error } = await query.returns<FleetFindingRow[]>()
+      if (error) throw new Error(error.message)
+      return (data ?? []).map(toFleetFinding)
+    },
+
+    async closeFinding(inspectionId, itemId, note) {
+      const { error } = await client().rpc('close_finding', {
+        p_inspection_id: inspectionId,
+        p_item_id: itemId,
+        p_note: note,
+        p_evidence_path: null,
+      })
+      if (error) throw new Error(error.message)
     },
 
     async approve(id, signature) {

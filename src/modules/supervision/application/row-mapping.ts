@@ -11,6 +11,7 @@
  * that reaches a printed document.
  */
 import type { InspectionSummary, ReviewAnswer, ReviewStatus } from '../domain/review'
+import type { FleetFinding } from '../domain/finding'
 
 export interface SummaryRow {
   id: string
@@ -79,4 +80,40 @@ export const toReviewAnswer = (a: AnswerRow): ReviewAnswer => ({
   observation: a.observation,
   responsible: a.responsible,
   dueDate: a.due_date,
+})
+
+export interface FleetFindingRow {
+  inspection_id: string
+  item_id: string
+  plate: string
+  inspected_at: string
+  item_code: string
+  item_label: string
+  section_title: string
+  observation: string | null
+  responsible: string | null
+  due_date: string | null
+  closed: boolean
+  closed_at: string | null
+  closed_by_name: string | null
+  closure_note: string | null
+  overdue: boolean
+}
+
+export const toFleetFinding = (r: FleetFindingRow): FleetFinding => ({
+  inspectionId: r.inspection_id,
+  itemId: r.item_id,
+  plate: r.plate,
+  inspectedAt: r.inspected_at,
+  itemCode: r.item_code,
+  itemLabel: r.item_label,
+  sectionTitle: r.section_title,
+  observation: r.observation,
+  responsible: r.responsible,
+  dueDate: r.due_date,
+  closed: Boolean(r.closed),
+  closedAt: r.closed_at,
+  closedByName: r.closed_by_name,
+  closureNote: r.closure_note,
+  overdue: Boolean(r.overdue),
 })

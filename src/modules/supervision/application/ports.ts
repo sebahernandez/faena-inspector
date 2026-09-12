@@ -1,4 +1,5 @@
 import type { InspectionSummary, ReviewAnswer } from '../domain/review'
+import type { FleetFinding } from '../domain/finding'
 
 export interface InspectionDetail {
   summary: InspectionSummary
@@ -26,4 +27,7 @@ export interface SupervisionGateway {
   listInspections(filter: 'pending' | 'approved' | 'all'): Promise<InspectionSummary[]>
   getInspection(id: string): Promise<InspectionDetail | null>
   approve(id: string, signature: Blob | null): Promise<void>
+  /** Every NO of the fleet, open and closed. */
+  listFindings(filter: 'open' | 'overdue' | 'closed' | 'all'): Promise<FleetFinding[]>
+  closeFinding(inspectionId: string, itemId: string, note: string): Promise<void>
 }

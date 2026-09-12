@@ -242,6 +242,28 @@ no perder precisión en JSON. Sin convertir, `yesCount + noCount + naCount`
 daría `"4632"` en vez de `51` — y ese número terminaría impreso. La conversión
 vive en `row-mapping.ts` con su test.
 
+## Hallazgos de la flota
+
+`/panel/hallazgos` reúne todos los `NO` de todos los camiones. Tres decisiones
+que no son cosméticas:
+
+**Cerrar un hallazgo no escribe en la inspección.** No puede: la inspección
+firmada es inmutable. El cierre es un hecho aparte —quién verificó la
+corrección, cuándo y con qué nota— que apunta al hallazgo. Verificado en la
+base real: después de cerrar, `updated_at` de la inspección sigue igual a
+`created_at` y el ítem sigue siendo `NO`.
+
+**El cierre también es inmutable.** Un registro de cumplimiento es
+append-only: si un cierre resultó equivocado, la próxima inspección de ese
+camión va a levantar el ítem otra vez, y ese es el rastro honesto. Editar el
+historial para que se vea limpio es lo único que un registro así no puede
+permitir.
+
+**El trabajo sin responsable va primero.** Un hallazgo que nadie fechó ni
+asignó no es de baja prioridad — es trabajo que nadie está persiguiendo, y
+mandarlo al fondo de la lista es exactamente cómo se olvida por un año. El
+orden es: vencidos, por vencer, **sin plazo**, programados, cerrados.
+
 ## Sin backend también funciona
 
 Sin `VITE_SUPABASE_URL` la app arranca igual: se inspecciona, se firma y se
@@ -258,7 +280,7 @@ estado roto.
 - [x] Fase 5 — cola de salida y worker de sincronización
 - [x] Fase 6 — fotos de evidencia con anexo en el PDF
 - [x] Fase 7 — panel del supervisor y aprobación
-- [ ] Fase 8 — panel de hallazgos
+- [x] Fase 8 — panel de hallazgos de la flota con cierre
 
 ## Pendiente con el cliente
 

@@ -14,6 +14,7 @@ import { Route as AccesoRouteImport } from './routes/acceso'
 import { Route as InspeccionNuevaRouteImport } from './routes/inspeccion.nueva'
 import { Route as PanelIndexRouteImport } from './routes/panel.index'
 import { Route as PanelIdRouteImport } from './routes/panel.$id'
+import { Route as PanelHallazgosRouteImport } from './routes/panel.hallazgos'
 import { Route as InspeccionIdIndexRouteImport } from './routes/inspeccion.$id.index'
 import { Route as InspeccionIdDocumentoRouteImport } from './routes/inspeccion.$id.documento'
 import { Route as InspeccionIdFirmaRouteImport } from './routes/inspeccion.$id.firma'
@@ -44,6 +45,11 @@ const PanelIdRoute = PanelIdRouteImport.update({
   path: '/panel/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PanelHallazgosRoute = PanelHallazgosRouteImport.update({
+  id: '/panel/hallazgos',
+  path: '/panel/hallazgos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InspeccionIdIndexRoute = InspeccionIdIndexRouteImport.update({
   id: '/inspeccion/$id/',
   path: '/inspeccion/$id/',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
   '/panel/$id': typeof PanelIdRoute
+  '/panel/hallazgos': typeof PanelHallazgosRoute
   '/panel/': typeof PanelIndexRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
   '/panel/$id': typeof PanelIdRoute
+  '/panel/hallazgos': typeof PanelHallazgosRoute
   '/panel': typeof PanelIndexRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/acceso': typeof AccesoRoute
   '/inspeccion/nueva': typeof InspeccionNuevaRoute
   '/panel/$id': typeof PanelIdRoute
+  '/panel/hallazgos': typeof PanelHallazgosRoute
   '/panel/': typeof PanelIndexRoute
   '/inspeccion/$id/documento': typeof InspeccionIdDocumentoRoute
   '/inspeccion/$id/firma': typeof InspeccionIdFirmaRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/acceso'
     | '/inspeccion/nueva'
     | '/panel/$id'
+    | '/panel/hallazgos'
     | '/panel/'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/acceso'
     | '/inspeccion/nueva'
     | '/panel/$id'
+    | '/panel/hallazgos'
     | '/panel'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/acceso'
     | '/inspeccion/nueva'
     | '/panel/$id'
+    | '/panel/hallazgos'
     | '/panel/'
     | '/inspeccion/$id/documento'
     | '/inspeccion/$id/firma'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AccesoRoute: typeof AccesoRoute
   InspeccionNuevaRoute: typeof InspeccionNuevaRoute
   PanelIdRoute: typeof PanelIdRoute
+  PanelHallazgosRoute: typeof PanelHallazgosRoute
   PanelIndexRoute: typeof PanelIndexRoute
   InspeccionIdDocumentoRoute: typeof InspeccionIdDocumentoRoute
   InspeccionIdFirmaRoute: typeof InspeccionIdFirmaRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/panel/hallazgos': {
+      id: '/panel/hallazgos'
+      path: '/panel/hallazgos'
+      fullPath: '/panel/hallazgos'
+      preLoaderRoute: typeof PanelHallazgosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inspeccion/$id/': {
       id: '/inspeccion/$id/'
       path: '/inspeccion/$id'
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccesoRoute: AccesoRoute,
   InspeccionNuevaRoute: InspeccionNuevaRoute,
   PanelIdRoute: PanelIdRoute,
+  PanelHallazgosRoute: PanelHallazgosRoute,
   PanelIndexRoute: PanelIndexRoute,
   InspeccionIdDocumentoRoute: InspeccionIdDocumentoRoute,
   InspeccionIdFirmaRoute: InspeccionIdFirmaRoute,
