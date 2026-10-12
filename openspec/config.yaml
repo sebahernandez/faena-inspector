@@ -1,0 +1,76 @@
+schema: spec-driven
+
+# Detected 2026-10-12. Single project at the repository root (".").
+context: |
+  Project: faena-inspector, a single project at the repository root. User-facing copy is Spanish (es-CL); code and artifacts are English.
+  Tech stack: React 19, TypeScript 6 (strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes), Vite 8, TanStack Router and React Query, Tailwind 4, Dexie (IndexedDB), Supabase JS, Zod 4, vite-plugin-pwa.
+  Architecture: ui -> application -> domain, infrastructure adapters implement application ports. src/app/container.ts is the only composition root.
+  Modules: src/modules/{inspection,supervision,sync,template,auth}; src/shared/{db,lib,ui}; src/routes (file-based TanStack routes).
+  Enforced by test: src/test/architecture.test.ts (domain imports only zod and other domains; UI never imports infrastructure; no network calls in domain or application).
+  Testing: Vitest 5 (jsdom, globals, setup in src/test/setup.ts), Testing Library, fake-indexeddb, PGlite. Run `npm test`.
+  Quality: `npm run lint` (oxlint), `npm run typecheck` (tsc -b), `npm run build`; `npm run check` runs typecheck, lint, and tests.
+
+strict_tdd: true
+
+testing:
+  strict_tdd: true
+  # Strict TDD is true: no marker or config overrode the default, the discovered project set is non-empty (1 project),
+  # and the explicit workspace-level command `npm test` covers every in-scope project.
+  workspace_test_command: "npm test"
+  projects:
+    - path: "."
+      stack: "TypeScript, React 19, Vite 8"
+      framework: "Vitest 5"
+      test_command: "npm test"
+      test_watch_command: "npm run test:watch"
+      layers:
+        unit:
+          available: true
+          tool: "Vitest 5 (jsdom)"
+        integration:
+          available: true
+          tool: "Testing Library, fake-indexeddb, @electric-sql/pglite"
+        e2e:
+          available: false
+          tool: null
+      coverage:
+        available: false
+        command: null   # no coverage provider in devDependencies
+      quality:
+        linter:
+          available: true
+          command: "npm run lint"   # oxlint
+        type_checker:
+          available: true
+          command: "npm run typecheck"   # tsc -b --noEmit
+        formatter:
+          available: false
+          command: null
+      aggregate_command: "npm run check"
+
+rules:
+  proposal:
+    - Include a rollback plan for changes that touch the Dexie schema, the sync outbox, or supabase/migrations.
+    - Keep the change inside the existing layer boundaries; src/test/architecture.test.ts must keep passing.
+  specs:
+    - Use Given/When/Then scenarios and RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Record the layer placement (domain, application, infrastructure, ui) and the rationale for each new file.
+    - Wire new adapters only through src/app/container.ts.
+  tasks:
+    - Group by phase with hierarchical numbering; keep each task completable in one session.
+    - Pair each implementation task with its test first (Strict TDD).
+  apply:
+    tdd: true
+    test_command: "npm test"
+    guidelines:
+      - Follow the existing module layout and the Dexie and Supabase patterns already in src/modules.
+      - Domain code imports only zod and other domains.
+  verify:
+    test_command: "npm test"
+    build_command: "npm run build"
+    lint_command: "npm run lint"
+    typecheck_command: "npm run typecheck"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas into openspec/specs.
