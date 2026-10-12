@@ -1,14 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { auth } from '@/app/container'
+import { devTestAccounts } from '@/modules/auth/application/dev-test-accounts'
 import { useSession } from '@/modules/auth/ui/use-session'
 
 export const Route = createFileRoute('/acceso')({ component: Access })
 
 function Access() {
   const { session, loading, configured } = useSession()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [testAccounts] = useState(() => devTestAccounts(import.meta.env, import.meta.env.DEV))
+  const [email, setEmail] = useState(testAccounts[0]?.email ?? '')
+  const [password, setPassword] = useState(testAccounts[0]?.password ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,6 +84,27 @@ function Access() {
           className={field}
         />
       </label>
+
+      {testAccounts.length > 0 && (
+        <div className="space-y-2">
+          <span className="block text-sm font-medium text-slate-700">Cuentas de prueba</span>
+          <div className="flex gap-2">
+            {testAccounts.map((account) => (
+              <button
+                key={account.label}
+                type="button"
+                onClick={() => {
+                  setEmail(account.email)
+                  setPassword(account.password)
+                }}
+                className="min-h-12 flex-1 rounded-lg border border-slate-300 font-medium"
+              >
+                {account.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
