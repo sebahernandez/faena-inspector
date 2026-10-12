@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define where development work lands in this repository. As of 2026-10-12, `develop` is the development branch and every change is made there from now on. `master` holds what has been promoted from `develop`.
+Define where development work lands in this repository. As of 2026-10-12, `develop` is the development branch and every change is made there from now on. `main` holds what has been promoted from `develop`.
 
 ## Requirements
 
@@ -37,21 +37,21 @@ Every change to the repository, including code, tests, migrations, configuration
 - GIVEN a change is developed on a short-lived branch such as `feat/<name>` or `fix/<name>`
 - WHEN the change is complete
 - THEN the branch MUST have been created from `develop`
-- AND it MUST be merged into `develop`, not into `master`
+- AND it MUST be merged into `develop`, not into `main`
 
-### Requirement: Master is not a working branch
+### Requirement: Main is not a working branch
 
-Commits MUST NOT be created directly on `master`. `master` SHALL change only by merging `develop` into it.
+Commits MUST NOT be created directly on `main`. `main` SHALL change only by merging `develop` into it.
 
-#### Scenario: Attempting to commit on master
+#### Scenario: Attempting to commit on main
 
-- GIVEN `master` is checked out
+- GIVEN `main` is checked out
 - WHEN a change is ready to be committed
 - THEN the contributor MUST switch to `develop`, or to a branch created from it, before committing
 
-#### Scenario: Promoting work to master
+#### Scenario: Promoting work to main
 
 - GIVEN `develop` contains work that is ready to be promoted
-- WHEN `master` is updated
-- THEN the update MUST be a merge of `develop` into `master`
+- WHEN `main` is updated
+- THEN the update MUST be a merge of `develop` into `main`
 - AND `npm run check` SHOULD pass on `develop` before the merge
